@@ -11,6 +11,8 @@
 import type * as auth from "../auth.js";
 import type * as evaluations from "../evaluations.js";
 import type * as http from "../http.js";
+import type * as openMeteo from "../openMeteo.js";
+import type * as openMeteoActions from "../openMeteoActions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -23,6 +25,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   evaluations: typeof evaluations;
   http: typeof http;
+  openMeteo: typeof openMeteo;
+  openMeteoActions: typeof openMeteoActions;
   users: typeof users;
 }>;
 

@@ -20,4 +20,46 @@ export default defineSchema({
       }),
     ),
   }).index("email", ["email"]),
+
+  /** One row per Open-Meteo response: full JSON as stored by the backend (no client shaping). */
+  openMeteoRaw: defineTable({
+    latitude: v.number(),
+    longitude: v.number(),
+    locationName: v.optional(v.string()),
+    /** Stringified JSON from the Marine API (or mock) — single source of truth. */
+    payload: v.string(),
+    createdAt: v.number(),
+    source: v.union(v.literal("api"), v.literal("mock")),
+  }).index("by_lat_lng_created", [
+    "latitude",
+    "longitude",
+    "createdAt",
+  ]),
+
+  /**
+   * Parsed / separated series derived from `openMeteoRaw` in the backend (aligned hourly arrays).
+   */
+  marineForecasts: defineTable({
+    rawId: v.id("openMeteoRaw"),
+    latitude: v.number(),
+    longitude: v.number(),
+    createdAt: v.number(),
+    hourly: v.object({
+      time: v.array(v.string()),
+      waveHeight: v.array(v.number()),
+      waveDirection: v.array(v.number()),
+      wavePeriod: v.array(v.number()),
+      windWaveHeight: v.array(v.number()),
+      windWavePeriod: v.array(v.number()),
+      swellWaveHeight: v.array(v.number()),
+      swellWaveDirection: v.array(v.number()),
+      swellWavePeriod: v.array(v.number()),
+    }),
+  })
+    .index("by_raw", ["rawId"])
+    .index("by_lat_lng_created", [
+      "latitude",
+      "longitude",
+      "createdAt",
+    ]),
 });
