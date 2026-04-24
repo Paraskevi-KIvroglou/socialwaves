@@ -1,10 +1,16 @@
-import type { Report } from "@/lib/types";
+import type { ReportKind } from "@/lib/types";
 import { REPORT_META } from "@/lib/reportMeta";
-import { getBeach } from "@/data/beaches";
 
-export function ReportFeedCard({ report }: { report: Report }) {
+export function ReportFeedCard({
+  report,
+  beachName,
+  beachArea,
+}: {
+  report: { beachSlug: string; kind: ReportKind; note?: string; createdAt: number; userHandle: string };
+  beachName?: string;
+  beachArea?: string;
+}) {
   const meta = REPORT_META[report.kind];
-  const beach = getBeach(report.beachId);
   const when = relTime(report.createdAt);
   const toneBg =
     meta.tone === "hero"
@@ -22,7 +28,7 @@ export function ReportFeedCard({ report }: { report: Report }) {
           <div>
             <div className="text-sm font-semibold text-slate-900">{meta.label}</div>
             <div className="text-xs text-slate-500">
-              {beach ? `${beach.name} · ${beach.area}` : report.beachId}
+              {beachName ? `${beachName}${beachArea ? " · " + beachArea : ""}` : report.beachSlug}
             </div>
           </div>
         </div>
@@ -36,8 +42,8 @@ export function ReportFeedCard({ report }: { report: Report }) {
   );
 }
 
-function relTime(iso: string): string {
-  const d = Date.now() - new Date(iso).getTime();
+function relTime(createdAtMs: number): string {
+  const d = Date.now() - createdAtMs;
   const m = Math.round(d / 60000);
   if (m < 1) return "just now";
   if (m < 60) return `${m}m ago`;

@@ -1,112 +1,185 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useRef } from "react";
+import { useAction, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { AppShell } from "@/components/AppShell";
 import { BeachCard } from "@/components/BeachCard";
-import { SurfScoreBadge } from "@/components/SurfScoreBadge";
+import { ForecastCard } from "@/components/ForecastCard";
 import { AgentCard } from "@/components/AgentCard";
 import { ReportFeedCard } from "@/components/ReportFeedCard";
 import { LocationGate } from "@/components/LocationGate";
 import { SectionHeader } from "@/components/SectionHeader";
-import { Card } from "@/components/Card";
-import { BEACHES } from "@/data/beaches";
 import { AGENT_INSIGHTS } from "@/data/agentInsights";
-import { SEED_REPORTS } from "@/data/mockReports";
-import { fetchForecast } from "@/lib/openmeteo";
-import { waveEmoji } from "@/lib/weather";
-import type { Beach, SurfForecast } from "@/lib/types";
+import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
+import { computeSurfScore } from "@/lib/surfScore";
+import { getSession, DEFAULT_USER } from "@/lib/mockAuth";
+import { useFavorites } from "@/lib/useFavorites";
+import type { SkillLevel, SurfForecast } from "@/lib/types";
+import type { FunctionReturnType } from "convex/server";
 
-/** Same IDs as `DEFAULT_USER.favoriteBeachIds` in mockAuth (server cannot import that client module). */
-const FAVORITE_BEACH_IDS = ["tinos-kolymbithres", "vouliagmeni", "falassarna"] as const;
-const favoriteIdSet = new Set<string>(FAVORITE_BEACH_IDS);
+type CachedForecast = NonNullable<FunctionReturnType<typeof api.forecasts.getCached>>;
+type RecentReportRow = NonNullable<FunctionReturnType<typeof api.reports.listRecent>>[number];
 
-const USER_OPTS = { skillLevel: "intermediate" as const, preferredHeight: 1.2 };
+function buildSurfForecast(
+  raw: CachedForecast,
+  skillLevel: SkillLevel,
+  preferredHeight: number
+): SurfForecast {
+  const surfScore = computeSurfScore({
+    waveHeight: raw.waveHeight,
+    swellPeriod: raw.swellPeriod,
+    windSpeed: raw.windSpeed,
+    skillLevel,
+    preferredHeight,
+  });
+  return {
+    waveHeight: raw.waveHeight,
+    swellPeriod: raw.swellPeriod,
+    swellDirection: raw.swellDirection,
+    windSpeed: raw.windSpeed,
+    surfScore,
+    bestWindow: raw.bestWindow,
+    updatedAt: raw.updatedAt,
+    source: raw.source,
+  };
+}
 
-export const revalidate = 900; // 15 min
+function BeachCardFromConvex({
+  row,
+  skillLevel,
+  preferredHeight,
+}: {
+  row: ConvexBeach;
+  skillLevel: SkillLevel;
+  preferredHeight: number;
+}) {
+  const forecast = useQuery(api.forecasts.getCached, { beachSlug: row.slug });
+  const beach = toUiBeach(row);
+  const surfForecast =
+    forecast === undefined || forecast === null
+      ? undefined
+      : buildSurfForecast(forecast, skillLevel, preferredHeight);
+  return <BeachCard beach={beach} forecast={surfForecast} />;
+}
 
-export default async function DashboardPage() {
-  const withForecasts = await Promise.all(
-    BEACHES.map(async (b): Promise<{ beach: Beach; forecast: SurfForecast }> => ({
-      beach: b,
-      forecast: await fetchForecast(b, USER_OPTS),
-    }))
+function BestTodayForecast({
+  slugs,
+  skillLevel,
+  preferredHeight,
+}: {
+  slugs: string[];
+  skillLevel: SkillLevel;
+  preferredHeight: number;
+}) {
+  const padded = useMemo(() => {
+    const s = [...slugs.slice(0, 8)];
+    while (s.length < 8) s.push("");
+    return s;
+  }, [slugs]);
+
+  const q0 = useQuery(api.forecasts.getCached, padded[0] ? { beachSlug: padded[0] } : "skip");
+  const q1 = useQuery(api.forecasts.getCached, padded[1] ? { beachSlug: padded[1] } : "skip");
+  const q2 = useQuery(api.forecasts.getCached, padded[2] ? { beachSlug: padded[2] } : "skip");
+  const q3 = useQuery(api.forecasts.getCached, padded[3] ? { beachSlug: padded[3] } : "skip");
+  const q4 = useQuery(api.forecasts.getCached, padded[4] ? { beachSlug: padded[4] } : "skip");
+  const q5 = useQuery(api.forecasts.getCached, padded[5] ? { beachSlug: padded[5] } : "skip");
+  const q6 = useQuery(api.forecasts.getCached, padded[6] ? { beachSlug: padded[6] } : "skip");
+  const q7 = useQuery(api.forecasts.getCached, padded[7] ? { beachSlug: padded[7] } : "skip");
+
+  const queries = [q0, q1, q2, q3, q4, q5, q6, q7];
+  const best = useMemo(() => {
+    const entries = padded
+      .map((slug, i) => ({ slug, raw: queries[i] }))
+      .filter(
+        (x): x is { slug: string; raw: CachedForecast } =>
+          Boolean(x.slug) && x.raw !== undefined && x.raw !== null
+      );
+    let top: SurfForecast | null = null;
+    for (const { raw } of entries) {
+      const sf = buildSurfForecast(raw, skillLevel, preferredHeight);
+      if (!top || sf.surfScore > top.surfScore) top = sf;
+    }
+    return top;
+  }, [padded, q0, q1, q2, q3, q4, q5, q6, q7, skillLevel, preferredHeight]);
+
+  if (!best) {
+    return (
+      <section className="rounded-3xl border border-slate-200 bg-slate-50/90 p-8 text-center text-slate-600 shadow-[var(--shadow-soft)]">
+        Checking today&apos;s conditions…
+      </section>
+    );
+  }
+
+  return <ForecastCard forecast={best} />;
+}
+
+export default function DashboardPage() {
+  const user = getSession() ?? DEFAULT_USER;
+  const { favoriteSlugs } = useFavorites();
+  const beaches = useQuery(api.beaches.listAll);
+  const recentReports = useQuery(api.reports.listRecent, { limit: 5 });
+  const refreshMany = useAction(api.forecasts.refreshMany);
+  const refreshedRef = useRef(false);
+
+  const skillLevel = user.skillLevel;
+  const preferredHeight = user.preferredWaveHeight;
+
+  const topSlugs = useMemo(
+    () => (beaches ? beaches.slice(0, 8).map((b: ConvexBeach) => b.slug) : []),
+    [beaches]
   );
 
-  const ranked = [...withForecasts].sort((a, b) => b.forecast.surfScore - a.forecast.surfScore);
-  const best = ranked[0];
-  const favorites = FAVORITE_BEACH_IDS.map((id) => withForecasts.find((x) => x.beach.id === id))
-    .filter((x): x is { beach: Beach; forecast: SurfForecast } => Boolean(x));
-  const latestReports = SEED_REPORTS.slice(0, 3);
+  useEffect(() => {
+    if (!beaches?.length || refreshedRef.current) return;
+    refreshedRef.current = true;
+    void refreshMany({
+      beachSlugs: beaches.slice(0, 8).map((b: ConvexBeach) => b.slug),
+    });
+  }, [beaches, refreshMany]);
 
-  const greeting = buildGreeting(best.forecast.surfScore, best.beach.name);
+  const beachBySlug = useMemo(() => {
+    const m = new Map<string, ConvexBeach>();
+    if (!beaches) return m;
+    for (const b of beaches as ConvexBeach[]) m.set(b.slug, b);
+    return m;
+  }, [beaches]);
+
+  const favoriteRows = useMemo(() => {
+    if (!beaches) return [];
+    const set = new Set(favoriteSlugs);
+    return (beaches as ConvexBeach[]).filter((b) => set.has(b.slug));
+  }, [beaches, favoriteSlugs]);
 
   return (
-    <AppShell greeting={greeting}>
+    <AppShell greeting={`Hey ${user.displayName ?? "surfer"} 🌊`}>
       <LocationGate />
-      {/* Hero: best beach today */}
-      <Link
-        href={`/beach/${best.beach.id}`}
-        className="block rounded-3xl p-6 bg-gradient-to-br from-sky-300 via-sky-200 to-sand-300 shadow-[var(--shadow-pop)] wave-drift active:scale-[0.99] transition-transform"
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wider text-sky-900/80 font-semibold">Best today</span>
-          <SurfScoreBadge score={best.forecast.surfScore} size="lg" />
-        </div>
-        <div className="mt-3 flex items-end gap-3">
-          <span className="text-5xl" aria-hidden>{best.beach.hero.emoji}</span>
-          <div>
-            <div className="text-2xl font-bold text-slate-900 leading-tight">{best.beach.name}</div>
-            <div className="text-sm text-slate-700">{best.beach.area}, {best.beach.country}</div>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-4 text-sm text-slate-800">
-          <span className="inline-flex items-center gap-1.5">
-            <span aria-hidden>{waveEmoji(best.forecast.waveHeight)}</span>
-            <span className="font-semibold tabular-nums">{best.forecast.waveHeight.toFixed(1)}m</span>
-          </span>
-          <span>·</span>
-          <span>Window <strong className="font-semibold">{best.forecast.bestWindow}</strong></span>
-        </div>
-      </Link>
+      <BestTodayForecast slugs={topSlugs} skillLevel={skillLevel} preferredHeight={preferredHeight} />
 
-      {/* Agent insights carousel */}
-      <div>
-        <SectionHeader title="Agents on it" emoji="🤖" />
-        <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x">
-          {AGENT_INSIGHTS.slice(0, 3).map((i) => (
-            <div key={i.id} className="min-w-[85%] snap-start">
-              <AgentCard insight={i} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Favorites */}
       <div>
         <SectionHeader
           title="Your favorites"
           emoji="⭐"
           action={<Link href="/beaches">All beaches →</Link>}
         />
-        <div className="space-y-3">
-          {favorites.map(({ beach, forecast }) => (
-            <BeachCard key={beach.id} beach={beach} forecast={forecast} />
-          ))}
-        </div>
-      </div>
-
-      {/* Top-ranked other beaches */}
-      <div>
-        <SectionHeader title="More spots" emoji="🏖️" />
-        <div className="space-y-3">
-          {ranked
-            .filter((r) => !favoriteIdSet.has(r.beach.id))
-            .slice(0, 3)
-            .map(({ beach, forecast }) => (
-              <BeachCard key={beach.id} beach={beach} forecast={forecast} />
+        {favoriteRows.length === 0 ? (
+          <p className="text-sm text-slate-600 px-1">Star a beach to pin it here 🌟</p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x pb-1">
+            {favoriteRows.map((row) => (
+              <div key={row.slug} className="min-w-[min(100%,320px)] snap-start shrink-0 w-[85vw] max-w-sm">
+                <BeachCardFromConvex
+                  row={row}
+                  skillLevel={skillLevel}
+                  preferredHeight={preferredHeight}
+                />
+              </div>
             ))}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Latest reports */}
       <div>
         <SectionHeader
           title="Surfer reports"
@@ -114,26 +187,36 @@ export default async function DashboardPage() {
           action={<Link href="/reports">See all →</Link>}
         />
         <div className="space-y-3">
-          {latestReports.map((r) => (
-            <ReportFeedCard key={r.id} report={r} />
-          ))}
+          {(recentReports ?? []).map((r: RecentReportRow) => {
+            const b = beachBySlug.get(r.beachSlug);
+            return (
+              <ReportFeedCard
+                key={r._id}
+                report={{
+                  beachSlug: r.beachSlug,
+                  kind: r.kind,
+                  note: r.note,
+                  createdAt: r.createdAt,
+                  userHandle: r.userHandle,
+                }}
+                beachName={b?.name}
+                beachArea={b?.area}
+              />
+            );
+          })}
         </div>
       </div>
 
-      {/* Tagline */}
-      <Card className="bg-gradient-to-br from-sand-100 to-sand-200 border-sand-200 text-center">
-        <div className="text-3xl" aria-hidden>🦀</div>
-        <div className="mt-2 text-sm font-semibold text-sand-800">Forecasts predict. Surfers verify.</div>
-        <div className="text-xs text-sand-700">The Waze of surfing.</div>
-      </Card>
+      <div>
+        <SectionHeader title="Agents on it" emoji="🤖" />
+        <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x">
+          {AGENT_INSIGHTS.map((i) => (
+            <div key={i.id} className="min-w-[85%] snap-start">
+              <AgentCard insight={i} />
+            </div>
+          ))}
+        </div>
+      </div>
     </AppShell>
   );
-}
-
-function buildGreeting(score: number, beachName: string): string {
-  if (score >= 80) return `🔥 It's ON at ${beachName} — drop everything.`;
-  if (score >= 65) return `🤙 ${beachName} is going off. Worth the drive.`;
-  if (score >= 45) return `🏄 ${beachName} looks paddle-worthy today.`;
-  if (score >= 25) return `😐 Marginal day — check ${beachName} anyway.`;
-  return `💤 Flat everywhere. Maybe a skate day?`;
 }

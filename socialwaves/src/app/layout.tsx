@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka } from "next/font/google";
 import { LocationProvider } from "@/lib/LocationProvider";
+import { ConvexClientProvider } from "./ConvexClientProvider";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -42,13 +43,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${fredoka.variable} h-full antialiased`}>
       <body className="min-h-full bg-white text-slate-900 flex flex-col">
-        <LocationProvider>{children}</LocationProvider>
+        <ConvexClientProvider>
+          <LocationProvider>{children}</LocationProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

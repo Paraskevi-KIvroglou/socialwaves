@@ -1,150 +1,151 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { ConvexBeach } from "@/lib/beachUi";
 import { AppShell } from "@/components/AppShell";
-import { Card } from "@/components/Card";
-import { SectionHeader } from "@/components/SectionHeader";
-import { BEACHES } from "@/data/beaches";
-import { getSession, DEFAULT_USER, updateSession, signOut } from "@/lib/mockAuth";
+import { getSession, signOut, updateSession } from "@/lib/mockAuth";
+import { useFavorites } from "@/lib/useFavorites";
 import type { SkillLevel, User } from "@/lib/types";
-
-const SKILLS: Array<{ key: SkillLevel; label: string; emoji: string }> = [
-  { key: "beginner", label: "Beginner", emoji: "🌱" },
-  { key: "intermediate", label: "Intermediate", emoji: "🏄" },
-  { key: "advanced", label: "Advanced", emoji: "🦈" },
-];
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<User>(DEFAULT_USER);
-  const [saved, setSaved] = useState(false);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  const { favoriteSlugs, toggle } = useFavorites();
+  const beaches = useQuery(api.beaches.listAll);
 
   useEffect(() => {
-    setUser(getSession() ?? DEFAULT_USER);
+    setUser(getSession());
   }, []);
 
-  function commit(patch: Partial<User>) {
-    const next = updateSession(patch);
-    setUser(next);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1200);
+  const favoriteBeaches = useMemo(() => {
+    if (!beaches) return [];
+    const set = new Set(favoriteSlugs);
+    return beaches.filter((b: ConvexBeach) => set.has(b.slug));
+  }, [beaches, favoriteSlugs]);
+
+  if (user === undefined) {
+    return (
+      <AppShell greeting="Your profile">
+        <div className="h-40 rounded-2xl bg-slate-200/80 animate-pulse" />
+      </AppShell>
+    );
   }
 
-  function toggleFavorite(id: string) {
-    const set = new Set(user.favoriteBeachIds);
-    if (set.has(id)) set.delete(id);
-    else set.add(id);
-    commit({ favoriteBeachIds: Array.from(set) });
-  }
-
-  function handleSignOut() {
-    signOut();
-    router.push("/login");
+  if (user === null) {
+    return (
+      <AppShell greeting="Your profile">
+        <p className="text-center text-slate-600 py-8">
+          Not signed in —{" "}
+          <Link href="/login" className="text-sky-600 font-semibold underline underline-offset-2">
+            /login
+          </Link>
+        </p>
+      </AppShell>
+    );
   }
 
   return (
-    <AppShell greeting="Tune SocialWave to your surf.">
-      <Card className="bg-gradient-to-br from-sky-200 to-sky-100 border-sky-200">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center text-3xl shadow-[var(--shadow-soft)]">
-            🦀
-          </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">@{user.handle}</div>
-            <div className="text-sm text-slate-700">{user.email}</div>
-          </div>
+    <AppShell greeting="Your profile">
+      <div className="rounded-3xl bg-white border border-slate-200 p-6 text-center shadow-[var(--shadow-soft)]">
+        <div className="text-5xl" aria-hidden>
+          🏄
         </div>
-      </Card>
-
-      <SectionHeader title="Display name" emoji="🪪" />
-      <Card>
-        <input
-          value={user.displayName}
-          onChange={(e) => commit({ displayName: e.target.value })}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus:bg-white"
-          placeholder="What should we call you?"
-        />
-      </Card>
-
-      <SectionHeader title="Skill level" emoji="🏄" />
-      <div className="grid grid-cols-3 gap-2">
-        {SKILLS.map((s) => {
-          const active = user.skillLevel === s.key;
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => commit({ skillLevel: s.key })}
-              className={`rounded-2xl py-3 text-sm font-medium border ${
-                active
-                  ? "bg-sky-500 text-white border-sky-500"
-                  : "bg-white text-slate-700 border-slate-200"
-              }`}
-            >
-              <div className="text-2xl" aria-hidden>{s.emoji}</div>
-              <div className="mt-0.5">{s.label}</div>
-            </button>
-          );
-        })}
+        <div className="mt-3 text-lg font-bold text-sky-700">@{user.handle}</div>
+        <div className="text-base font-semibold text-slate-900">{user.displayName}</div>
+        <div className="text-sm text-slate-600 mt-1">{user.email}</div>
       </div>
 
-      <SectionHeader title="Preferred wave height" emoji="🌊" />
-      <Card>
-        <input
-          type="range"
-          min="0.4"
-          max="3"
-          step="0.1"
-          value={user.preferredWaveHeight}
-          onChange={(e) => commit({ preferredWaveHeight: Number(e.target.value) })}
-          className="w-full accent-sky-500"
-        />
-        <div className="mt-2 flex items-center justify-between text-sm text-slate-600">
-          <span>0.4m</span>
-          <span className="font-semibold text-slate-900 text-base tabular-nums">
-            {user.preferredWaveHeight.toFixed(1)}m
-          </span>
-          <span>3m</span>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+        <div>
+          <label htmlFor="profile-skill" className="text-xs font-medium text-slate-500">
+            Skill level
+          </label>
+          <select
+            id="profile-skill"
+            value={user.skillLevel}
+            onChange={(e) => {
+              const skillLevel = e.target.value as SkillLevel;
+              setUser(updateSession({ skillLevel }));
+            }}
+            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
         </div>
-      </Card>
-
-      <SectionHeader title="Favorite beaches" emoji="⭐" />
-      <div className="space-y-2">
-        {BEACHES.map((b) => {
-          const fav = user.favoriteBeachIds.includes(b.id);
-          return (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => toggleFavorite(b.id)}
-              className={`w-full rounded-2xl border p-3 flex items-center gap-3 text-left ${
-                fav ? "bg-sand-100 border-sand-300" : "bg-white border-slate-200"
-              }`}
-            >
-              <div className="h-10 w-10 rounded-xl bg-sky-100 text-xl flex items-center justify-center">
-                {b.hero.emoji}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-slate-900">{b.name}</div>
-                <div className="text-xs text-slate-500">{b.area}, {b.country}</div>
-              </div>
-              <div className="text-xl" aria-hidden>{fav ? "⭐" : "☆"}</div>
-            </button>
-          );
-        })}
+        <div>
+          <div className="flex items-center justify-between">
+            <label htmlFor="profile-wave" className="text-xs font-medium text-slate-500">
+              Preferred wave height
+            </label>
+            <span className="text-sm font-semibold text-slate-900 tabular-nums">
+              {user.preferredWaveHeight.toFixed(1)}m
+            </span>
+          </div>
+          <input
+            id="profile-wave"
+            type="range"
+            min={0.5}
+            max={3.5}
+            step={0.1}
+            value={user.preferredWaveHeight}
+            onChange={(e) => {
+              const preferredWaveHeight = Number(e.target.value);
+              setUser(updateSession({ preferredWaveHeight }));
+            }}
+            className="mt-2 w-full accent-sky-500"
+          />
+        </div>
       </div>
 
-      {saved ? (
-        <div className="text-center text-xs text-sky-700 font-medium">Saved ✨</div>
-      ) : null}
+      <div>
+        <h2 className="text-sm font-bold text-slate-900 mb-2 px-1">Favorite beaches</h2>
+        {beaches === undefined ? (
+          <div className="h-20 rounded-2xl bg-slate-200/80 animate-pulse" />
+        ) : favoriteBeaches.length === 0 ? (
+          <p className="text-sm text-slate-500 px-1">No favorites yet — add some from a beach page.</p>
+        ) : (
+          <ul className="space-y-2">
+            {favoriteBeaches.map((b: ConvexBeach) => (
+              <li
+                key={b.slug}
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{b.name}</div>
+                  <div className="text-xs text-slate-500">{b.area}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void toggle(b.slug)}
+                  className="text-xs font-semibold text-rose-600 px-2 py-1 rounded-lg hover:bg-rose-50"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <button
         type="button"
-        onClick={handleSignOut}
-        className="w-full rounded-2xl border border-slate-200 bg-white text-slate-700 font-semibold py-3 mt-2"
+        onClick={() => {
+          signOut();
+          router.push("/login");
+        }}
+        className="w-full rounded-2xl border border-slate-200 bg-white text-slate-700 font-semibold py-3"
       >
         Sign out
       </button>
+
+      <p className="text-[11px] text-slate-400 text-center px-2">
+        Forecasts by Open-Meteo · data by DWD, Copernicus & others.
+      </p>
     </AppShell>
   );
 }

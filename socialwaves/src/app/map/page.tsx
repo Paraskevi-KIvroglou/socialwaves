@@ -1,10 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { AppShell } from "@/components/AppShell";
 import { SectionHeader } from "@/components/SectionHeader";
 import { LocationGate } from "@/components/LocationGate";
-import { BEACHES } from "@/data/beaches";
 
 const BeachesMap = dynamic(
   () => import("@/components/BeachesMap").then((m) => m.BeachesMap),
@@ -20,13 +21,15 @@ const BeachesMap = dynamic(
 );
 
 export default function MapPage() {
+  const beaches = useQuery(api.beaches.listAll);
+  const count = beaches?.length ?? 0;
   return (
     <AppShell greeting="Every SocialWave spot on the map. Tap a pin to dive in.">
       <LocationGate />
       <SectionHeader
         title="Surf map"
         emoji="🗺️"
-        action={<span className="text-slate-500 text-xs">{BEACHES.length} spots</span>}
+        action={<span className="text-slate-500 text-xs">{count} spots</span>}
       />
       <BeachesMap className="h-[72vh]" />
       <p className="text-[11px] text-slate-400 text-center">

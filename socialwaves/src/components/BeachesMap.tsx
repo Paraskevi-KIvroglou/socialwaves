@@ -5,7 +5,9 @@ import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { BEACHES } from "@/data/beaches";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
 import type { Beach } from "@/lib/types";
 import { useLocation } from "@/lib/LocationProvider";
 
@@ -59,7 +61,8 @@ function FitBounds({ beaches, userLoc }: { beaches: Beach[]; userLoc?: { latitud
 
 export function BeachesMap({ className }: { className?: string }) {
   const { location } = useLocation();
-  const beaches = useMemo(() => BEACHES, []);
+  const rows = useQuery(api.beaches.listAll) as ConvexBeach[] | undefined;
+  const beaches = useMemo(() => (rows ?? []).map(toUiBeach), [rows]);
 
   return (
     <div

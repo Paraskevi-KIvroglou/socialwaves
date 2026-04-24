@@ -1,24 +1,64 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { AppShell } from "@/components/AppShell";
 import { BeachCard } from "@/components/BeachCard";
-import { SectionHeader } from "@/components/SectionHeader";
-import { BEACHES } from "@/data/beaches";
-import { fetchForecast } from "@/lib/openmeteo";
+import { LocationGate } from "@/components/LocationGate";
+import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
+import { useLocation } from "@/lib/LocationProvider";
+import { haversineKm } from "@/lib/location";
 
-const USER_OPTS = { skillLevel: "intermediate" as const, preferredHeight: 1.2 };
-export const revalidate = 900;
+export default function BeachesPage() {
+  const [q, setQ] = useState("");
+  const { location } = useLocation();
+  const beaches = useQuery(api.beaches.listAll);
 
-export default async function BeachesPage() {
-  const entries = await Promise.all(
-    BEACHES.map(async (b) => ({ beach: b, forecast: await fetchForecast(b, USER_OPTS) }))
-  );
-  const ranked = entries.sort((a, b) => b.forecast.surfScore - a.forecast.surfScore);
+  const filteredSorted = useMemo(() => {
+    if (!beaches) return [];
+    const needle = q.trim().toLowerCase();
+    const rows: ConvexBeach[] = needle
+      ? beaches.filter(
+          (b: ConvexBeach) =>
+            b.name.toLowerCase().includes(needle) ||
+            b.area.toLowerCase().includes(needle) ||
+            b.country.toLowerCase().includes(needle)
+        )
+      : [...(beaches as ConvexBeach[])];
+
+    if (location) {
+      rows.sort(
+        (a: ConvexBeach, b: ConvexBeach) =>
+          haversineKm(location, a) - haversineKm(location, b)
+      );
+    } else {
+      rows.sort((a: ConvexBeach, b: ConvexBeach) => b.trustScore - a.trustScore);
+    }
+    return rows;
+  }, [beaches, q, location]);
+
+  const total = beaches?.length ?? 192;
 
   return (
-    <AppShell greeting="Every Med + Greek spot we track, ranked by today's score.">
-      <SectionHeader title="All beaches" emoji="🏖️" />
-      <div className="space-y-3">
-        {ranked.map(({ beach, forecast }) => (
-          <BeachCard key={beach.id} beach={beach} forecast={forecast} />
+    <AppShell greeting="All beaches">
+      <LocationGate />
+      <label className="block px-1">
+        <span className="sr-only">Search beaches</span>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search name, area, country…"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-[var(--shadow-soft)] focus:outline-none focus:ring-2 focus:ring-sky-300"
+        />
+      </label>
+      <p className="text-sm text-slate-600 px-1">
+        Showing {filteredSorted.length} of {total} beaches
+      </p>
+      <div className="grid grid-cols-1 gap-3">
+        {filteredSorted.map((row: ConvexBeach) => (
+          <BeachCard key={row.slug} beach={toUiBeach(row)} />
         ))}
       </div>
     </AppShell>

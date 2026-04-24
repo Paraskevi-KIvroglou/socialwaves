@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ReportKind, Report } from "@/lib/types";
-import { saveLocalReport } from "@/lib/reports";
+import { useCreateReport } from "@/lib/reports";
 import { getSession } from "@/lib/mockAuth";
 import { ReportButtons } from "./ReportButtons";
 
@@ -18,6 +18,7 @@ export function ReportSheet({
   beachName: string;
   onSubmitted?: (r: Report) => void;
 }) {
+  const createReport = useCreateReport();
   const ref = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<ReportKind | undefined>();
   const [note, setNote] = useState("");
@@ -38,17 +39,24 @@ export function ReportSheet({
     }
   }, [open]);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!kind) return;
     const user = getSession();
-    const report = saveLocalReport({
-      beachId,
+    const id = await createReport({
+      beachSlug: beachId,
       kind,
       note: note.trim() || undefined,
       userHandle: user?.handle ?? "anon_surfer",
     });
     setStatus("done");
-    onSubmitted?.(report);
+    onSubmitted?.({
+      id: String(id),
+      beachId,
+      kind,
+      note: note.trim() || undefined,
+      userHandle: user?.handle ?? "anon_surfer",
+      createdAt: new Date().toISOString(),
+    });
     setTimeout(() => onClose(), 900);
   }
 

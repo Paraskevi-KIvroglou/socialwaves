@@ -1,108 +1,108 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { AppShell } from "@/components/AppShell";
 import { ReportFeedCard } from "@/components/ReportFeedCard";
 import { SectionHeader } from "@/components/SectionHeader";
-import { Card } from "@/components/Card";
-import { loadLocalReports } from "@/lib/reports";
-import { SEED_REPORTS } from "@/data/mockReports";
-import type { Report, ReportKind } from "@/lib/types";
+import type { ReportKind } from "@/lib/types";
 
-const KINDS: Array<{ key: ReportKind | "all"; label: string; emoji: string }> = [
-  { key: "all", label: "All", emoji: "🌐" },
-  { key: "perfect_session", label: "Stoke", emoji: "🔥" },
-  { key: "waves_there", label: "Waves", emoji: "🌊" },
-  { key: "no_waves", label: "Flat", emoji: "💤" },
-  { key: "too_windy", label: "Wind", emoji: "🌬️" },
-  { key: "too_crowded", label: "Crowd", emoji: "👥" },
-  { key: "unsafe", label: "Unsafe", emoji: "⚠️" },
-];
+function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function dayBucket(ms: number): string {
+  const day = startOfDay(ms);
+  const today = startOfDay(Date.now());
+  const y = new Date(today);
+  y.setDate(y.getDate() - 1);
+  const yesterday = y.getTime();
+  if (day === today) return "Today";
+  if (day === yesterday) return "Yesterday";
+  return new Date(ms).toLocaleDateString();
+}
+
+type ReportRow = {
+  _id: string;
+  beachSlug: string;
+  kind: ReportKind;
+  note?: string;
+  createdAt: number;
+  userHandle: string;
+};
 
 export default function ReportsPage() {
-  const [localReports, setLocalReports] = useState<Report[]>([]);
-  const [filter, setFilter] = useState<ReportKind | "all">("all");
+  const reports = useQuery(api.reports.listRecent, { limit: 50 });
+  const beaches = useQuery(api.beaches.listAll);
 
-  useEffect(() => {
-    setLocalReports(loadLocalReports());
-  }, []);
+  const slugToBeach = useMemo(() => {
+    const m: Record<string, { name: string; area: string }> = {};
+    if (!beaches) return m;
+    for (const b of beaches) {
+      m[b.slug] = { name: b.name, area: b.area };
+    }
+    return m;
+  }, [beaches]);
 
-  const all = useMemo(() => {
-    const merged: Report[] = [...localReports, ...SEED_REPORTS];
-    merged.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-    return merged;
-  }, [localReports]);
+  const { bucketOrder, byBucket } = useMemo(() => {
+    const byBucket = new Map<string, ReportRow[]>();
+    if (!reports) return { bucketOrder: [] as string[], byBucket };
 
-  const filtered = filter === "all" ? all : all.filter((r) => r.kind === filter);
+    for (const r of reports) {
+      const b = dayBucket(r.createdAt);
+      if (!byBucket.has(b)) byBucket.set(b, []);
+      byBucket.get(b)!.push(r as ReportRow);
+    }
 
-  const now = Date.now();
-  const today = filtered.filter((r) => now - new Date(r.createdAt).getTime() < 24 * 3600 * 1000);
-  const earlier = filtered.filter((r) => now - new Date(r.createdAt).getTime() >= 24 * 3600 * 1000);
+    const fixedOrder = ["Today", "Yesterday"];
+    const rest = [...byBucket.keys()].filter((k) => !fixedOrder.includes(k));
+    rest.sort((a, b) => {
+      const maxA = Math.max(...(byBucket.get(a) ?? []).map((x) => x.createdAt));
+      const maxB = Math.max(...(byBucket.get(b) ?? []).map((x) => x.createdAt));
+      return maxB - maxA;
+    });
+    const bucketOrder = [...fixedOrder.filter((k) => byBucket.has(k)), ...rest];
+    return { bucketOrder, byBucket };
+  }, [reports]);
 
-  const stokeCount = all.filter((r) => r.kind === "perfect_session").length;
+  const loading = reports === undefined || beaches === undefined;
 
   return (
-    <AppShell greeting="Every wave, verified by the people who surfed it.">
-      <Card className="bg-gradient-to-br from-sand-100 to-sand-200 border-sand-200">
-        <div className="flex items-center gap-3">
-          <div className="text-3xl" aria-hidden>🦀</div>
-          <div>
-            <div className="text-sm text-sand-800 font-semibold">{stokeCount} perfect sessions logged recently</div>
-            <div className="text-xs text-sand-700">Thanks for keeping everyone honest.</div>
-          </div>
+    <AppShell greeting="Community reports">
+      {loading ? (
+        <div className="space-y-3">
+          <div className="h-24 rounded-2xl bg-slate-200/80 animate-pulse" />
+          <div className="h-24 rounded-2xl bg-slate-200/80 animate-pulse" />
+          <div className="h-24 rounded-2xl bg-slate-200/80 animate-pulse" />
         </div>
-      </Card>
-
-      <div className="-mx-4 px-4 overflow-x-auto no-scrollbar">
-        <div className="flex gap-2 w-max">
-          {KINDS.map((k) => {
-            const active = filter === k.key;
-            return (
-              <button
-                key={k.key}
-                type="button"
-                onClick={() => setFilter(k.key)}
-                className={`rounded-full px-3 py-1.5 text-sm border ${
-                  active
-                    ? "bg-sky-500 text-white border-sky-500"
-                    : "bg-white text-slate-700 border-slate-200"
-                }`}
-              >
-                <span className="mr-1" aria-hidden>{k.emoji}</span>
-                {k.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {today.length > 0 ? (
-        <div>
-          <SectionHeader title="Today" emoji="☀️" />
-          <div className="space-y-3">
-            {today.map((r) => (
-              <ReportFeedCard key={r.id} report={r} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {earlier.length > 0 ? (
-        <div>
-          <SectionHeader title="Earlier" emoji="🕰️" />
-          <div className="space-y-3">
-            {earlier.map((r) => (
-              <ReportFeedCard key={r.id} report={r} />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {filtered.length === 0 ? (
-        <Card className="text-center text-slate-500">
-          <div className="text-3xl" aria-hidden>🫧</div>
-          <div className="mt-2 text-sm">No reports match this filter yet.</div>
-        </Card>
-      ) : null}
+      ) : reports.length === 0 ? (
+        <p className="text-center text-slate-600 py-8">No reports yet 🤙 be the first!</p>
+      ) : (
+        bucketOrder.map((bucket) => {
+          const list = byBucket.get(bucket) ?? [];
+          if (list.length === 0) return null;
+          return (
+            <div key={bucket}>
+              <SectionHeader title={bucket} />
+              <div className="space-y-3">
+                {list.map((r) => {
+                  const beach = slugToBeach[r.beachSlug];
+                  return (
+                    <ReportFeedCard
+                      key={r._id}
+                      report={r}
+                      beachName={beach?.name}
+                      beachArea={beach?.area}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })
+      )}
     </AppShell>
   );
 }
