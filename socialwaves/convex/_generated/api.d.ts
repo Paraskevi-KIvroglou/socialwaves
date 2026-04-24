@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as beachRefresh from "../beachRefresh.js";
 import type * as beaches from "../beaches.js";
 import type * as evaluations from "../evaluations.js";
+import type * as favorites from "../favorites.js";
 import type * as forecasts from "../forecasts.js";
 import type * as http from "../http.js";
 import type * as openMeteo from "../openMeteo.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   beachRefresh: typeof beachRefresh;
   beaches: typeof beaches;
   evaluations: typeof evaluations;
+  favorites: typeof favorites;
   forecasts: typeof forecasts;
   http: typeof http;
   openMeteo: typeof openMeteo;

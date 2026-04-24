@@ -57,6 +57,14 @@ export default defineSchema({
     heroGradient: v.string(),
   }).index("by_slug", ["slug"]),
 
+  favorites: defineTable({
+    userHandle: v.string(),
+    beachSlug: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userHandle"])
+    .index("by_user_beach", ["userHandle", "beachSlug"]),
+
   reports: defineTable({
     beachSlug: v.string(),
     kind: v.union(
