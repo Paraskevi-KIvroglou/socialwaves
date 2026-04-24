@@ -65,6 +65,22 @@ export const upsertMany = mutation({
   },
 });
 
+/** Drop rows that predate the full beach shape (e.g. slug-only test data) so the schema can be tightened. */
+export const removeIncomplete = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("beaches").collect();
+    let removed = 0;
+    for (const b of all) {
+      if (b.area === undefined || b.heroGradient === undefined) {
+        await ctx.db.delete(b._id);
+        removed++;
+      }
+    }
+    return { removed };
+  },
+});
+
 type MarineRefreshResult = {
   rawId: Id<"openMeteoRaw">;
   forecastId: Id<"marineForecasts">;

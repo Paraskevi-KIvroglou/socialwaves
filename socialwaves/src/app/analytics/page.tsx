@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import type { ConvexBeach } from "@/lib/beachUi";
 import { AppShell } from "@/components/AppShell";
 import { ReportFeedCard } from "@/components/ReportFeedCard";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -150,7 +149,7 @@ export default function AnalyticsPage() {
       ) : (
         <div className="space-y-3">
           {recentFive.map((r) => {
-            const beach = beaches?.find((b: ConvexBeach) => b.slug === r.beachSlug);
+            const beach = beaches?.find((b) => b.slug === r.beachSlug);
             return (
               <ReportFeedCard
                 key={r._id}
