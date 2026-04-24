@@ -1,0 +1,32 @@
+---
+description: Technical implementation rules
+alwaysApply: true
+---
+
+Use a simple stack optimized for speed.
+
+Preferred stack:
+
+- Next.js / React
+- TypeScript
+- Tailwind CSS
+- Local mock data first
+- Open-Meteo API for real forecast data
+- Supabase only if persistence is needed
+
+Code rules:
+
+- Keep components small.
+- Prefer readable code over clever abstractions.
+- Mock hard parts when needed for demo.
+- Use clear names: BeachCard, SurfScore, ReportCondition, PersonalAnalytics.
+- Do not build unnecessary architecture.
+- All demo flows must work without real login.
+
+Default pages:
+
+- /login
+- /dashboard
+- /beach/[id]
+- /reports
+- /analytics

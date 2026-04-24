@@ -1,0 +1,51 @@
+---
+description: Open-Meteo marine forecast integration rules
+alwaysApply: true
+---
+
+Use Open-Meteo Marine API for surf forecast data.
+
+Relevant variables:
+
+- wave_height
+- wave_direction
+- wave_period
+- wind_wave_height
+- wind_wave_period
+- swell_wave_height
+- swell_wave_direction
+- swell_wave_period
+
+For MVP, calculate surf score using:
+
+- wave height
+- swell period
+- wind condition
+- user skill level
+- user preferred wave height
+
+Do not require API keys.
+
+If API integration fails, fall back to mock forecast data so the demo never breaks.
+
+Example beach data shape:
+
+```ts
+type Beach = {
+  id: string
+  name: string
+  country: string
+  latitude: number
+  longitude: number
+  forecast?: SurfForecast
+  trustScore: number
+}
+
+type SurfForecast = {
+  waveHeight: number
+  swellPeriod: number
+  windSpeed: number
+  surfScore: number
+  bestWindow: string
+}
+```

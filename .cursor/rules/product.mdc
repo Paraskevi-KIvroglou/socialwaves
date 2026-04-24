@@ -1,0 +1,35 @@
+---
+description: Product rules for SurfSignal surfer forecast app
+alwaysApply: true
+---
+
+Build SurfSignal: a surfer app that combines Open-Meteo marine forecasts with real surfer beach reports.
+
+Core promise:
+"The Waze of surfing — forecasts corrected by real surfers."
+
+Main questions the app must answer:
+
+1. Which beach is this surfer’s favorite?
+2. Was the surf actually good?
+3. Did the forecast actually match reality?
+
+Prioritize hackathon MVP over full production complexity.
+
+MVP features:
+
+- Surfer profile
+- Favorite beaches
+- Open-Meteo marine forecast
+- Surf score per beach
+- Report beach condition
+- Forecast accuracy / trust score
+- Personal analytics dashboard
+
+Avoid:
+
+- Complex authentication
+- Real social features
+- Payments
+- Overbuilt backend
+- Too many screens

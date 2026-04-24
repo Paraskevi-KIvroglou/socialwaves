@@ -1,0 +1,31 @@
+---
+description: AI agent behavior rules for SurfSignal
+alwaysApply: true
+---
+
+SurfSignal should feel agentic, not like a static weather app.
+
+Core agents:
+
+1. **Forecast Agent**  
+   Reads forecast data and summarizes surf conditions.
+
+2. **Beach Scout Agent**  
+   Matches beaches to the surfer's preferences.
+
+3. **Reality Check Agent**  
+   Compares surfer reports against forecast predictions.
+
+4. **Trust Score Agent**  
+   Calculates how reliable each beach forecast is.
+
+5. **Personal Coach Agent**  
+   Explains what conditions the surfer personally enjoys.
+
+Agent outputs should be short, human, and useful.
+
+Example:
+"Forecast looked good, but 4 surfers reported weak waves. This beach may be overpredicted today."
+
+Do not expose complicated agent internals.  
+Show agents as simple cards/statuses in the UI.

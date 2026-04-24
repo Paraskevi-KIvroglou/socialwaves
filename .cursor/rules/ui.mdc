@@ -1,0 +1,44 @@
+---
+description: UI and UX rules
+alwaysApply: true
+---
+
+Design style:
+
+- Clean
+- Ocean/surf inspired
+- Mobile-first
+- Fast to demo
+- Big readable cards
+- Avoid clutter
+
+Important UI components:
+
+- Surf score badge
+- Forecast vs Reality card
+- Beach trust score
+- Report condition buttons
+- Favorite beach insight
+- Personal analytics cards
+
+Report buttons:
+
+- Waves were there
+- No waves
+- Smaller than predicted
+- Too windy
+- Too crowded
+- Unsafe
+- Perfect session
+
+Dashboard should immediately show:
+
+1. Best beach today
+2. Forecast confidence
+3. Favorite beach
+4. Recent surfer reports
+
+Use plain language:
+
+- Good: "Was it worth going?"
+- Bad: "Forecast validation metric"
