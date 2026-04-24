@@ -12,6 +12,18 @@ A hackathon MVP that combines Open-Meteo marine forecasts with real surfer repor
 - **localStorage mock auth** — `src/lib/mockAuth.ts` (Convex Auth magic-link deferred until an email provider is wired)
 - **Location** — client-side only via `src/lib/LocationProvider.tsx` per [.cursor/rules/location.mdc](.cursor/rules/location.mdc)
 
+## Vercel (production)
+
+The Git repository root is **not** the Next.js app. The app lives in [`socialwaves/`](socialwaves/). If Vercel’s **Root Directory** is left as `.` (repo root), builds either fail or produce an empty site, and **https://socialwaves.vercel.app/** can return **404**.
+
+1. In Vercel: **Project → Settings → Build & Deployment → Root Directory** → set to **`socialwaves`** (Save).
+2. Redeploy (or push a commit to trigger a new build).
+3. Under **Environment Variables** (Production), set at least:
+   - **`NEXT_PUBLIC_CONVEX_URL`** — Convex **production** deployment URL (`.convex.cloud`)
+   - **`NEXT_PUBLIC_CONVEX_SITE_URL`** — matching **`.convex.site`** URL from the Convex dashboard  
+
+Resend / magic-link secrets belong on the **Convex** deployment, not Vercel (see comments in `socialwaves/.env.local`).
+
 ## Setup
 
 ```bash
