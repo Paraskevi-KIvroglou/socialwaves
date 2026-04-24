@@ -1,0 +1,40 @@
+---
+description: User location rules — how the app captures and uses the surfer's location
+alwaysApply: true
+---
+
+**Goal** — SocialWave asks the surfer to share browser location so beach rankings, distances, and nearby features are personalized.
+
+**Source of truth**
+
+- `LocationProvider` in `src/lib/LocationProvider.tsx` wraps the app (mounted in `src/app/layout.tsx`).
+- Components read location only via `useLocation()` from that provider — never call `navigator.geolocation` directly.
+
+**Types**
+
+- `UserLocation` and `LocationPermission` live in `src/lib/location.ts`. Import from there.
+
+**UX**
+
+- Do not auto-trigger the OS permission dialog on first load. Request location only after an explicit user action (e.g. `LocationGate` banner or a settings control).
+- Mount `LocationGate` (`src/components/LocationGate.tsx`) on screens where location materially changes the experience (dashboard, beach list). Do not put it in the root layout for every page.
+- Always handle `location === null`: show all beaches, a default region, or other sensible copy — never assume coordinates exist.
+- If `permission === "denied"`, do not nag for permission again; point users to browser/site settings instead.
+
+**Persistence**
+
+- Last-known coordinates are cached in `localStorage` under `LOCATION_STORAGE_KEY` from `src/lib/location.ts`. The provider hydrates from storage on mount.
+
+**Distance**
+
+- Use `haversineKm(a, b)` from `src/lib/location.ts` for beach distance. Do not add a separate geo library for this.
+
+**Privacy**
+
+- For MVP, location stays on the client. Do not send coordinates to third parties except Open-Meteo (forecast requests already use lat/lon).
+
+**Do not**
+
+- Persist location in Convex until we add authenticated per-user preferences on purpose.
+- Introduce a second geolocation hook, context, or ad-hoc `getCurrentPosition` wrapper.
+- Block the entire app on location permission — the product must work with location off or denied.

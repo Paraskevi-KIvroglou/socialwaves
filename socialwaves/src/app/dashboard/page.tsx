@@ -1,180 +1,137 @@
-"use client";
-
-import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
 import Link from "next/link";
-import { useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { BeachCard } from "@/components/BeachCard";
+import { SurfScoreBadge } from "@/components/SurfScoreBadge";
+import { AgentCard } from "@/components/AgentCard";
+import { ReportFeedCard } from "@/components/ReportFeedCard";
+import { SectionHeader } from "@/components/SectionHeader";
+import { Card } from "@/components/Card";
+import { BEACHES } from "@/data/beaches";
+import { AGENT_INSIGHTS } from "@/data/agentInsights";
+import { SEED_REPORTS } from "@/data/mockReports";
+import { fetchForecast } from "@/lib/openmeteo";
+import { waveEmoji } from "@/lib/weather";
+import type { Beach, SurfForecast } from "@/lib/types";
 
-export default function DashboardPage() {
-  const token = useAuthToken();
-  const { signOut } = useAuthActions();
-  const profile = useQuery(api.users.getMyProfile, token ? {} : "skip");
-  const evaluation = useQuery(
-    api.evaluations.getMyEvaluationSnapshot,
-    token ? {} : "skip",
+/** Same IDs as `DEFAULT_USER.favoriteBeachIds` in mockAuth (server cannot import that client module). */
+const FAVORITE_BEACH_IDS = ["tinos-kolymbithres", "vouliagmeni", "falassarna"] as const;
+const favoriteIdSet = new Set<string>(FAVORITE_BEACH_IDS);
+
+const USER_OPTS = { skillLevel: "intermediate" as const, preferredHeight: 1.2 };
+
+export const revalidate = 900; // 15 min
+
+export default async function DashboardPage() {
+  const withForecasts = await Promise.all(
+    BEACHES.map(async (b): Promise<{ beach: Beach; forecast: SurfForecast }> => ({
+      beach: b,
+      forecast: await fetchForecast(b, USER_OPTS),
+    }))
   );
-  const updateLocation = useMutation(api.users.updateMyLocation);
-  const refreshMarine = useAction(api.openMeteoActions.refreshMarineForecast);
-  const [name, setName] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
 
-  const loc = profile?.location;
-  const marine = useQuery(
-    api.openMeteo.getMarineForecastForLocation,
-    loc
-      ? { latitude: loc.latitude, longitude: loc.longitude }
-      : "skip",
-  );
+  const ranked = [...withForecasts].sort((a, b) => b.forecast.surfScore - a.forecast.surfScore);
+  const best = ranked[0];
+  const favorites = FAVORITE_BEACH_IDS.map((id) => withForecasts.find((x) => x.beach.id === id))
+    .filter((x): x is { beach: Beach; forecast: SurfForecast } => Boolean(x));
+  const latestReports = SEED_REPORTS.slice(0, 3);
 
-  if (!token) {
-    return (
-      <div className="p-6">
-        <p className="mb-4">You are not signed in.</p>
-        <Link href="/login" className="text-blue-600 underline">
-          Go to login
-        </Link>
-      </div>
-    );
-  }
-
-  if (profile === undefined || evaluation === undefined) {
-    return <p className="p-6">Loading…</p>;
-  }
-
-  const nextWaveH =
-    marine && marine.hourly.waveHeight.length
-      ? marine.hourly.waveHeight[0]
-      : null;
+  const greeting = buildGreeting(best.forecast.surfScore, best.beach.name);
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      {profile && (
-        <p className="text-sm text-zinc-600">
-          Signed in as {profile.email ?? "user"}
-        </p>
-      )}
-      {loc && (
-        <p className="text-sm">
-          <span className="font-medium">Saved location: </span>
-          {loc.name} ({loc.latitude.toFixed(4)}°, {loc.longitude.toFixed(4)}°)
-        </p>
-      )}
-
-      {loc && (
-        <div className="space-y-2 rounded-lg border border-sky-200/80 bg-sky-50/80 p-4 text-sm text-sky-950">
-          <p className="font-semibold">Open-Meteo (raw → parsed in Convex)</p>
-          {marine === undefined ? (
-            <p className="text-sky-800/80">Loading forecast…</p>
-          ) : marine ? (
-            <p>
-              <span className="font-medium">Next hour wave height: </span>
-              {nextWaveH != null ? `${nextWaveH.toFixed(2)} m` : "—"}
-            </p>
-          ) : (
-            <p className="text-sky-800/80">No ingested data yet. Refresh below.</p>
-          )}
-          <button
-            type="button"
-            className="rounded border border-sky-700 bg-sky-900 px-3 py-1.5 text-white"
-            onClick={() =>
-              void refreshMarine({
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                locationName: loc.name,
-              })
-            }
-          >
-            Fetch &amp; store raw + parse
-          </button>
-        </div>
-      )}
-
-      {evaluation && (
-        <section
-          className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 p-4"
-          aria-labelledby="evaluation-agent-heading"
-        >
-          <h2
-            id="evaluation-agent-heading"
-            className="text-sm font-semibold text-emerald-950"
-          >
-            Evaluation Agent
-          </h2>
-          <p className="mt-1 text-sm font-medium text-emerald-900">
-            {evaluation.headline}
-          </p>
-          <p className="mt-2 text-sm text-emerald-800/90">{evaluation.summary}</p>
-          {evaluation.trustPreview != null && (
-            <p className="mt-2 text-sm text-emerald-900">
-              <span className="font-medium">Trust preview: </span>
-              {evaluation.trustPreview}/100
-            </p>
-          )}
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-emerald-800/85">
-            {evaluation.bullets.map((b: string) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <form
-        className="space-y-3"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const la = parseFloat(lat);
-          const lo = parseFloat(lng);
-          if (!name.trim() || Number.isNaN(la) || Number.isNaN(lo)) {
-            return;
-          }
-          await updateLocation({ name: name.trim(), latitude: la, longitude: lo });
-        }}
+    <AppShell greeting={greeting}>
+      {/* Hero: best beach today */}
+      <Link
+        href={`/beach/${best.beach.id}`}
+        className="block rounded-3xl p-6 bg-gradient-to-br from-sky-300 via-sky-200 to-sand-300 shadow-[var(--shadow-pop)] wave-drift active:scale-[0.99] transition-transform"
       >
-        <p className="text-sm font-medium">Set home surf spot (stored on user)</p>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name (e.g. Pipeline, HI)"
-          className="w-full rounded border border-zinc-300 px-3 py-2"
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] uppercase tracking-wider text-sky-900/80 font-semibold">Best today</span>
+          <SurfScoreBadge score={best.forecast.surfScore} size="lg" />
+        </div>
+        <div className="mt-3 flex items-end gap-3">
+          <span className="text-5xl" aria-hidden>{best.beach.hero.emoji}</span>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 leading-tight">{best.beach.name}</div>
+            <div className="text-sm text-slate-700">{best.beach.area}, {best.beach.country}</div>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-4 text-sm text-slate-800">
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden>{waveEmoji(best.forecast.waveHeight)}</span>
+            <span className="font-semibold tabular-nums">{best.forecast.waveHeight.toFixed(1)}m</span>
+          </span>
+          <span>·</span>
+          <span>Window <strong className="font-semibold">{best.forecast.bestWindow}</strong></span>
+        </div>
+      </Link>
+
+      {/* Agent insights carousel */}
+      <div>
+        <SectionHeader title="Agents on it" emoji="🤖" />
+        <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x">
+          {AGENT_INSIGHTS.slice(0, 3).map((i) => (
+            <div key={i.id} className="min-w-[85%] snap-start">
+              <AgentCard insight={i} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Favorites */}
+      <div>
+        <SectionHeader
+          title="Your favorites"
+          emoji="⭐"
+          action={<Link href="/beaches">All beaches →</Link>}
         />
-        <div className="flex gap-2">
-          <input
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            placeholder="Latitude"
-            className="w-full rounded border border-zinc-300 px-3 py-2"
-            inputMode="decimal"
-          />
-          <input
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
-            placeholder="Longitude"
-            className="w-full rounded border border-zinc-300 px-3 py-2"
-            inputMode="decimal"
-          />
+        <div className="space-y-3">
+          {favorites.map(({ beach, forecast }) => (
+            <BeachCard key={beach.id} beach={beach} forecast={forecast} />
+          ))}
         </div>
-        <button
-          type="submit"
-          className="rounded bg-zinc-900 px-3 py-2 text-white"
-        >
-          Save location
-        </button>
-      </form>
-      <button
-        type="button"
-        className="text-sm text-zinc-500 underline"
-        onClick={() => void signOut()}
-      >
-        Sign out
-      </button>
-      <p>
-        <Link href="/" className="text-sm text-blue-600">
-          Home
-        </Link>
-      </p>
-    </div>
+      </div>
+
+      {/* Top-ranked other beaches */}
+      <div>
+        <SectionHeader title="More spots" emoji="🏖️" />
+        <div className="space-y-3">
+          {ranked
+            .filter((r) => !favoriteIdSet.has(r.beach.id))
+            .slice(0, 3)
+            .map(({ beach, forecast }) => (
+              <BeachCard key={beach.id} beach={beach} forecast={forecast} />
+            ))}
+        </div>
+      </div>
+
+      {/* Latest reports */}
+      <div>
+        <SectionHeader
+          title="Surfer reports"
+          emoji="📝"
+          action={<Link href="/reports">See all →</Link>}
+        />
+        <div className="space-y-3">
+          {latestReports.map((r) => (
+            <ReportFeedCard key={r.id} report={r} />
+          ))}
+        </div>
+      </div>
+
+      {/* Tagline */}
+      <Card className="bg-gradient-to-br from-sand-100 to-sand-200 border-sand-200 text-center">
+        <div className="text-3xl" aria-hidden>🦀</div>
+        <div className="mt-2 text-sm font-semibold text-sand-800">Forecasts predict. Surfers verify.</div>
+        <div className="text-xs text-sand-700">The Waze of surfing.</div>
+      </Card>
+    </AppShell>
   );
+}
+
+function buildGreeting(score: number, beachName: string): string {
+  if (score >= 80) return `🔥 It's ON at ${beachName} — drop everything.`;
+  if (score >= 65) return `🤙 ${beachName} is going off. Worth the drive.`;
+  if (score >= 45) return `🏄 ${beachName} looks paddle-worthy today.`;
+  if (score >= 25) return `😐 Marginal day — check ${beachName} anyway.`;
+  return `💤 Flat everywhere. Maybe a skate day?`;
 }

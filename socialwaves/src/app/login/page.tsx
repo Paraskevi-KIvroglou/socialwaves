@@ -1,53 +1,67 @@
 "use client";
-
-import { useAuthActions } from "@convex-dev/auth/react";
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
+import { signInDemo } from "@/lib/mockAuth";
 
 export default function LoginPage() {
-  const { signIn } = useAuthActions();
-  const [sent, setSent] = useState(false);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSending(true);
+    setTimeout(() => {
+      signInDemo(email.trim() || "demo@socialwave.app");
+      router.push("/dashboard");
+    }, 600);
+  }
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="text-sm text-zinc-600">
-        Magic link via email (Resend). Set{" "}
-        <code className="rounded bg-zinc-100 px-1">AUTH_RESEND_KEY</code> and{" "}
-        <code className="rounded bg-zinc-100 px-1">AUTH_RESEND_FROM</code> in
-        the Convex deployment.
-      </p>
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const form = new FormData(e.currentTarget);
-          const result = await signIn("resend", form);
-          if (!result.signingIn) {
-            setSent(true);
-          }
-        }}
-      >
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="you@example.com"
-          className="rounded border border-zinc-300 px-3 py-2"
-        />
-        <button
-          type="submit"
-          className="rounded bg-zinc-900 px-3 py-2 text-white"
+    <div className="min-h-dvh bg-gradient-to-b from-sky-200 via-sky-100 to-sand-100 flex flex-col pt-safe pb-safe">
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        <div className="text-7xl mb-3" aria-hidden>🦀</div>
+        <Logo size="lg" className="text-center" />
+        <p className="mt-3 text-center text-slate-700 max-w-xs">
+          Forecasts predict. Surfers verify. Welcome to <strong>SocialWave</strong>.
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 w-full max-w-sm rounded-3xl bg-white/85 backdrop-blur border border-white/80 p-5 shadow-[var(--shadow-pop)]"
         >
-          Send sign-in link
-        </button>
-      </form>
-      {sent && (
-        <p className="text-sm text-green-700">Check your email for the link.</p>
-      )}
-      <Link href="/" className="text-sm text-zinc-500 underline">
-        Home
-      </Link>
+          <label htmlFor="email" className="text-xs font-medium text-slate-500">
+            Your email
+          </label>
+          <input
+            id="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="you@ocean.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base focus:border-sky-400"
+          />
+          <button
+            type="submit"
+            disabled={sending}
+            className="mt-4 w-full rounded-2xl bg-sky-500 disabled:bg-sky-300 text-white font-semibold py-3.5 shadow-[var(--shadow-soft)] active:scale-[0.99]"
+          >
+            {sending ? "Sending link…" : "Send magic link ✨"}
+          </button>
+          <p className="mt-3 text-[11px] text-slate-500 text-center">
+            MVP demo — no real email is sent. Click and go.
+          </p>
+        </form>
+
+        <div className="mt-6 text-xs text-slate-600 flex items-center gap-4">
+          <span>🌊 Live forecasts</span>
+          <span>🦀 Real reports</span>
+          <span>🎯 Personal picks</span>
+        </div>
+      </div>
     </div>
   );
 }

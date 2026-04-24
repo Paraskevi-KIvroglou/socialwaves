@@ -29,7 +29,7 @@ Most surf apps stop at prediction. SurfSignal goes further:
 - Next.js
 - TypeScript
 - Tailwind CSS
-- Open-Meteo API
+- Open-Meteo API ([integration notes](docs/OPEN-METEO.md))
 - Local mock data (MVP)
 
 ## MVP features
