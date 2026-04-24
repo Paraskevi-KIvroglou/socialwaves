@@ -120,7 +120,7 @@ export default function DashboardPage() {
   const { favoriteSlugs } = useFavorites();
   const beaches = useQuery(api.beaches.listAll);
   const recentReports = useQuery(api.reports.listRecent, { limit: 5 });
-  const refreshMany = useAction(api.forecasts.refreshMany);
+  const refreshMany = useAction(api.beaches.refreshManyByBeachSlugs);
   const refreshedRef = useRef(false);
 
   const skillLevel = user.skillLevel;

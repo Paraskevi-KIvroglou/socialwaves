@@ -48,7 +48,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${fredoka.variable} h-full antialiased`}>
-      <body className="min-h-full bg-white text-slate-900 flex flex-col">
+      <body
+        className="min-h-full bg-white text-slate-900 flex flex-col"
+        suppressHydrationWarning
+      >
         <ConvexClientProvider>
           <LocationProvider>{children}</LocationProvider>
         </ConvexClientProvider>

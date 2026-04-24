@@ -56,7 +56,8 @@ type RefreshResult = {
   longitude: number;
 };
 
-async function refreshMarineHandler(
+/** Shared by `refreshMarineForecast` and `forecasts` slug-based actions (avoids circular `api` imports). */
+export async function refreshMarineHandler(
   ctx: ActionCtx,
   args: RefreshArgs,
 ): Promise<RefreshResult> {

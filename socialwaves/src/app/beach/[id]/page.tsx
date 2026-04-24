@@ -58,7 +58,7 @@ export default function BeachPage({ params }: { params: Promise<{ id: string }> 
   const beach = useQuery(api.beaches.getBySlug, { slug });
   const forecast = useQuery(api.forecasts.getCached, { beachSlug: slug });
   const reports = useQuery(api.reports.listForBeach, { beachSlug: slug, limit: 20 });
-  const refresh = useAction(api.forecasts.refresh);
+  const refresh = useAction(api.beaches.refreshByBeachSlug);
   const refreshOnce = useRef(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 

@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "seed:beaches": "tsx scripts/seed-beaches.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "convex": "convex dev",
-    "seed:beaches": "convex run seed:seedBeaches"
+    "seed:beaches:convex": "convex run seed:seedBeaches"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",

@@ -21,15 +21,6 @@ export default defineSchema({
     ),
   }).index("email", ["email"]),
 
-  /** Curated surf spots (seeded for /beach/[id] and picks). */
-  beaches: defineTable({
-    name: v.string(),
-    slug: v.string(),
-    region: v.optional(v.string()),
-    latitude: v.number(),
-    longitude: v.number(),
-  }).index("by_slug", ["slug"]),
-
   /** One row per Open-Meteo response: full JSON as stored by the backend (no client shaping). */
   openMeteoRaw: defineTable({
     latitude: v.number(),
@@ -44,6 +35,46 @@ export default defineSchema({
     "longitude",
     "createdAt",
   ]),
+
+  beaches: defineTable({
+    slug: v.string(),
+    name: v.string(),
+    area: v.string(),
+    country: v.string(),
+    region: v.string(),
+    latitude: v.number(),
+    longitude: v.number(),
+    skillLevels: v.array(
+      v.union(
+        v.literal("beginner"),
+        v.literal("intermediate"),
+        v.literal("advanced"),
+      ),
+    ),
+    trustScore: v.number(),
+    blurb: v.string(),
+    heroEmoji: v.string(),
+    heroGradient: v.string(),
+  }).index("by_slug", ["slug"]),
+
+  reports: defineTable({
+    beachSlug: v.string(),
+    kind: v.union(
+      v.literal("waves_there"),
+      v.literal("no_waves"),
+      v.literal("smaller_than_predicted"),
+      v.literal("too_windy"),
+      v.literal("too_crowded"),
+      v.literal("unsafe"),
+      v.literal("perfect_session"),
+    ),
+    note: v.optional(v.string()),
+    userHandle: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_beach_created", ["beachSlug", "createdAt"])
+    .index("by_user_created", ["userHandle", "createdAt"])
+    .index("by_created", ["createdAt"]),
 
   /**
    * Parsed / separated series derived from `openMeteoRaw` in the backend (aligned hourly arrays).
