@@ -18,11 +18,19 @@ The Git repository root is **not** the Next.js app. The app lives in [`socialwav
 
 1. In Vercel: **Project → Settings → Build & Deployment → Root Directory** → set to **`socialwaves`** (Save).
 2. Redeploy (or push a commit to trigger a new build).
-3. Under **Environment Variables** (Production), set at least:
-   - **`NEXT_PUBLIC_CONVEX_URL`** — Convex **production** deployment URL (`.convex.cloud`)
-   - **`NEXT_PUBLIC_CONVEX_SITE_URL`** — matching **`.convex.site`** URL from the Convex dashboard  
+3. Under **Environment Variables** (Production), point the Next.js app at your Convex deployment (same values as in `socialwaves/.env.local` after `npx convex dev`):
 
-Resend / magic-link secrets belong on the **Convex** deployment, not Vercel (see comments in `socialwaves/.env.local`).
+   **Option A — one backend for local + Vercel (Development deployment)**  
+   Use this if you prefer a single Convex project/deployment and avoid mixing up prod vs dev URLs:
+   - **`NEXT_PUBLIC_CONVEX_URL`** — e.g. `https://calm-bullfrog-11.convex.cloud`
+   - **`NEXT_PUBLIC_CONVEX_SITE_URL`** — e.g. `https://calm-bullfrog-11.convex.site`  
+
+   In the Convex dashboard, select that **Development** deployment and set **`SITE_URL`** to your live Next origin (e.g. `https://socialwaves.vercel.app/`) so magic links work from production.
+
+   **Option B — separate Convex Production deployment**  
+   Use the **Production** deployment’s `.convex.cloud` / `.convex.site` URLs instead, and set **`SITE_URL`** on that production deployment.
+
+Resend / magic-link secrets belong on the **Convex** deployment you use (dev or prod), not Vercel (see comments in `socialwaves/.env.local`).
 
 ## Setup
 
