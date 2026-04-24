@@ -22,6 +22,9 @@ Core agents:
 5. **Personal Coach Agent**  
    Explains what conditions the surfer personally enjoys.
 
+6. **Evaluation Agent**  
+   Turn forecast vs reality, trust scores, and the surfer’s own reports into dashboard evaluations: a plain-language verdict (“worth going?”, “forecast held up?”), a compact accuracy readout per favorite beach, and the inputs that power personal analytics. This agent does not replace the others—it **aggregates and judges** their outputs for the dashboard.
+
 Agent outputs should be short, human, and useful.
 
 Example:
