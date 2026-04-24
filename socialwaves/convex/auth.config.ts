@@ -1,5 +1,6 @@
 import type { AuthConfig } from "convex/server";
 
+// Issuer domain: Convex sets CONVEX_SITE_URL on the deployment (read-only).
 export default {
   providers: [
     {

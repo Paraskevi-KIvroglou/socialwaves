@@ -30,17 +30,22 @@ export default function DashboardPage() {
 
   if (!token) {
     return (
-      <div className="p-6">
-        <p className="mb-4">You are not signed in.</p>
-        <Link href="/login" className="text-blue-600 underline">
-          Go to login
+      <div className="mx-auto flex min-h-[50vh] max-w-md flex-col justify-center gap-4 p-6">
+        <p className="text-blue-950">You are not signed in.</p>
+        <Link
+          href="/login"
+          className="inline-flex w-fit rounded-xl bg-blue-950 px-4 py-2.5 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/20 hover:bg-blue-900"
+        >
+          Sign in with email
         </Link>
       </div>
     );
   }
 
   if (profile === undefined || evaluation === undefined) {
-    return <p className="p-6">Loading…</p>;
+    return (
+      <p className="p-6 text-blue-900/80">Loading…</p>
+    );
   }
 
   const nextWaveH =
@@ -49,10 +54,10 @@ export default function DashboardPage() {
       : null;
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+    <div className="mx-auto max-w-md space-y-6 p-6 text-blue-950">
+      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
       {profile && (
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-blue-900/70">
           Signed in as {profile.email ?? "user"}
         </p>
       )}
@@ -138,40 +143,43 @@ export default function DashboardPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name (e.g. Pipeline, HI)"
-          className="w-full rounded border border-zinc-300 px-3 py-2"
+          className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
         />
         <div className="flex gap-2">
           <input
             value={lat}
             onChange={(e) => setLat(e.target.value)}
             placeholder="Latitude"
-            className="w-full rounded border border-zinc-300 px-3 py-2"
+            className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
             inputMode="decimal"
           />
           <input
             value={lng}
             onChange={(e) => setLng(e.target.value)}
             placeholder="Longitude"
-            className="w-full rounded border border-zinc-300 px-3 py-2"
+            className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
             inputMode="decimal"
           />
         </div>
         <button
           type="submit"
-          className="rounded bg-zinc-900 px-3 py-2 text-white"
+          className="rounded-xl bg-blue-950 px-3 py-2 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/20 hover:bg-blue-900"
         >
           Save location
         </button>
       </form>
       <button
         type="button"
-        className="text-sm text-zinc-500 underline"
+        className="text-sm text-blue-900/60 underline decoration-sky-400/70 underline-offset-4 hover:text-blue-950"
         onClick={() => void signOut()}
       >
         Sign out
       </button>
       <p>
-        <Link href="/" className="text-sm text-blue-600">
+        <Link
+          href="/"
+          className="text-sm font-medium text-blue-900/70 underline decoration-sky-400/70 underline-offset-4 hover:text-blue-950"
+        >
           Home
         </Link>
       </p>
