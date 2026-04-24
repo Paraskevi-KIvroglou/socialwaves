@@ -10,18 +10,18 @@ Preferred stack:
 - Next.js / React
 - TypeScript
 - Tailwind CSS
-- Local mock data first
-- Open-Meteo API for real forecast data
-- Supabase only if persistence is needed
+- **Convex** as the backend: database, server functions, and real-time sync (replace ad-hoc mock persistence as features land).
+- **Convex Auth** with **magic link** (email) for sign-in—no custom session servers or non-Convex user stores.
+- Open-Meteo API for real forecast data (mock/seed only where the API is unavailable; see `openmeteo.mdc`).
 
 Code rules:
 
 - Keep components small.
 - Prefer readable code over clever abstractions.
-- Mock hard parts when needed for demo.
+- Mock hard parts when needed for demo (except auth—use Convex Auth, not a fake “demo login” that bypasses it).
 - Use clear names: BeachCard, SurfScore, ReportCondition, PersonalAnalytics.
 - Do not build unnecessary architecture.
-- All demo flows must work without real login.
+- Route protection and user identity: rely on Convex Auth; keep the magic-link flow minimal (no extra OAuth providers unless explicitly requested).
 
 Default pages:
 

@@ -28,8 +28,8 @@ MVP features:
 
 Avoid:
 
-- Complex authentication
+- Custom or multi-provider auth (use **Convex Auth** + **magic link** only for MVP)
 - Real social features
 - Payments
-- Overbuilt backend
+- A second backend or duplicate user store outside Convex
 - Too many screens
