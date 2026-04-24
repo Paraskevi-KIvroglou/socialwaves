@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 
 const HOURLY =
@@ -42,6 +43,51 @@ function mockMarineJson(lat: number, lng: number) {
   });
 }
 
+type RefreshArgs = {
+  latitude: number;
+  longitude: number;
+  locationName?: string;
+};
+
+type RefreshResult = {
+  rawId: Id<"openMeteoRaw">;
+  forecastId: Id<"marineForecasts">;
+  latitude: number;
+  longitude: number;
+};
+
+async function refreshMarineHandler(
+  ctx: ActionCtx,
+  args: RefreshArgs,
+): Promise<RefreshResult> {
+  const url = new URL("https://marine-api.open-meteo.com/v1/marine");
+  url.searchParams.set("latitude", String(args.latitude));
+  url.searchParams.set("longitude", String(args.longitude));
+  url.searchParams.set("hourly", HOURLY);
+
+  let source: "api" | "mock" = "api";
+  let payload: string;
+  try {
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      throw new Error(String(res.status));
+    }
+    const json: unknown = await res.json();
+    payload = JSON.stringify(json);
+  } catch {
+    source = "mock";
+    payload = mockMarineJson(args.latitude, args.longitude);
+  }
+
+  return await ctx.runMutation(internal.openMeteo.ingestFromApiResponse, {
+    latitude: args.latitude,
+    longitude: args.longitude,
+    locationName: args.locationName,
+    payload,
+    source,
+  });
+}
+
 /**
  * Fetches Open-Meteo Marine, stores the **raw** response in one table, and runs backend parsing
  * into `marineForecasts`. On failure, stores mock JSON so the demo still works.
@@ -58,32 +104,5 @@ export const refreshMarineForecast = action({
     latitude: v.number(),
     longitude: v.number(),
   }),
-  handler: async (ctx, args) => {
-    const url = new URL("https://marine-api.open-meteo.com/v1/marine");
-    url.searchParams.set("latitude", String(args.latitude));
-    url.searchParams.set("longitude", String(args.longitude));
-    url.searchParams.set("hourly", HOURLY);
-
-    let source: "api" | "mock" = "api";
-    let payload: string;
-    try {
-      const res = await fetch(url.toString());
-      if (!res.ok) {
-        throw new Error(String(res.status));
-      }
-      const json: unknown = await res.json();
-      payload = JSON.stringify(json);
-    } catch {
-      source = "mock";
-      payload = mockMarineJson(args.latitude, args.longitude);
-    }
-
-    return await ctx.runMutation(internal.openMeteo.ingestFromApiResponse, {
-      latitude: args.latitude,
-      longitude: args.longitude,
-      locationName: args.locationName,
-      payload,
-      source,
-    });
-  },
+  handler: async (ctx, args) => refreshMarineHandler(ctx, args),
 });

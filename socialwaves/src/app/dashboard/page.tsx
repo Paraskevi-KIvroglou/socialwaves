@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,9 +15,18 @@ export default function DashboardPage() {
     token ? {} : "skip",
   );
   const updateLocation = useMutation(api.users.updateMyLocation);
+  const refreshMarine = useAction(api.openMeteoActions.refreshMarineForecast);
   const [name, setName] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+
+  const loc = profile?.location;
+  const marine = useQuery(
+    api.openMeteo.getMarineForecastForLocation,
+    loc
+      ? { latitude: loc.latitude, longitude: loc.longitude }
+      : "skip",
+  );
 
   if (!token) {
     return (
@@ -34,6 +43,11 @@ export default function DashboardPage() {
     return <p className="p-6">Loading…</p>;
   }
 
+  const nextWaveH =
+    marine && marine.hourly.waveHeight.length
+      ? marine.hourly.waveHeight[0]
+      : null;
+
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -42,12 +56,40 @@ export default function DashboardPage() {
           Signed in as {profile.email ?? "user"}
         </p>
       )}
-      {profile?.location && (
+      {loc && (
         <p className="text-sm">
           <span className="font-medium">Saved location: </span>
-          {profile.location.name} ({profile.location.latitude.toFixed(4)}°,{" "}
-          {profile.location.longitude.toFixed(4)}°)
+          {loc.name} ({loc.latitude.toFixed(4)}°, {loc.longitude.toFixed(4)}°)
         </p>
+      )}
+
+      {loc && (
+        <div className="space-y-2 rounded-lg border border-sky-200/80 bg-sky-50/80 p-4 text-sm text-sky-950">
+          <p className="font-semibold">Open-Meteo (raw → parsed in Convex)</p>
+          {marine === undefined ? (
+            <p className="text-sky-800/80">Loading forecast…</p>
+          ) : marine ? (
+            <p>
+              <span className="font-medium">Next hour wave height: </span>
+              {nextWaveH != null ? `${nextWaveH.toFixed(2)} m` : "—"}
+            </p>
+          ) : (
+            <p className="text-sky-800/80">No ingested data yet. Refresh below.</p>
+          )}
+          <button
+            type="button"
+            className="rounded border border-sky-700 bg-sky-900 px-3 py-1.5 text-white"
+            onClick={() =>
+              void refreshMarine({
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                locationName: loc.name,
+              })
+            }
+          >
+            Fetch &amp; store raw + parse
+          </button>
+        </div>
       )}
 
       {evaluation && (
@@ -72,7 +114,7 @@ export default function DashboardPage() {
             </p>
           )}
           <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-emerald-800/85">
-            {evaluation.bullets.map((b) => (
+            {evaluation.bullets.map((b: string) => (
               <li key={b}>{b}</li>
             ))}
           </ul>

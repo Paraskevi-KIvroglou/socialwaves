@@ -123,22 +123,3 @@ export const getMarineForecastForLocation = query({
     };
   },
 });
-
-/** Inspect raw ingests for debugging (optional). */
-export const listRawIngestsForLocation = query({
-  args: {
-    latitude: v.number(),
-    longitude: v.number(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const take = Math.min(args.limit ?? 5, 20);
-    return await ctx.db
-      .query("openMeteoRaw")
-      .withIndex("by_lat_lng_created", (q) =>
-        q.eq("latitude", args.latitude).eq("longitude", args.longitude),
-      )
-      .order("desc")
-      .take(take);
-  },
-});
