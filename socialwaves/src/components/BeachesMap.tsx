@@ -9,6 +9,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
 import type { Beach } from "@/lib/types";
+import { haversineKm } from "@/lib/location";
 import { useLocation } from "@/lib/LocationProvider";
 
 function beachIcon(emoji: string): L.DivIcon {
@@ -47,11 +48,35 @@ function youIcon(): L.DivIcon {
   });
 }
 
-function FitBounds({ beaches, userLoc }: { beaches: Beach[]; userLoc?: { latitude: number; longitude: number } | null }) {
+function FitBounds({
+  beaches,
+  userLoc,
+}: {
+  beaches: Beach[];
+  userLoc?: { latitude: number; longitude: number } | null;
+}) {
   const map = useMap();
   useEffect(() => {
+    if (userLoc) {
+      // zoom around the user plus the 5 closest beaches
+      const sorted = [...beaches]
+        .map((b) => ({
+          b,
+          d: haversineKm({ latitude: b.latitude, longitude: b.longitude }, userLoc),
+        }))
+        .sort((a, b) => a.d - b.d)
+        .slice(0, 5)
+        .map((x) => x.b);
+      const points: Array<[number, number]> = [
+        [userLoc.latitude, userLoc.longitude],
+        ...sorted.map((b) => [b.latitude, b.longitude] as [number, number]),
+      ];
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 11 });
+      return;
+    }
+    // no user location — fit all beaches
     const points: Array<[number, number]> = beaches.map((b) => [b.latitude, b.longitude]);
-    if (userLoc) points.push([userLoc.latitude, userLoc.longitude]);
     if (points.length === 0) return;
     const bounds = L.latLngBounds(points);
     map.fitBounds(bounds, { padding: [40, 40], maxZoom: 8 });
