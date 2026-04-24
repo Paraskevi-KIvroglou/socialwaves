@@ -32,6 +32,16 @@ The Git repository root is **not** the Next.js app. The app lives in [`socialwav
 
 Resend / magic-link secrets belong on the **Convex** deployment you use (dev or prod), not Vercel (see comments in `socialwaves/.env.local`).
 
+## Vercel (preview deployments)
+
+Previews are **automatic** for pushes to branches (and for pull requests) once the Git integration is connected—no separate “preview mode” flag.
+
+1. **Root Directory** must still be **`socialwaves`** (same as production).
+2. **Environment Variables** → open each variable (`NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, etc.) and ensure **Preview** is checked (or add Preview-only copies). Use the same Convex URLs as local dev if you want one backend.
+3. Push a branch, e.g. `git checkout -b preview && git push -u origin preview` — Vercel builds and shows a URL like `https://socialwaves-….vercel.app` on the deployment and PR.
+4. **Deployment Protection**: if the preview returns **401**, turn off protection for previews or allow public access under **Project → Settings → Deployment Protection**.
+5. **Magic links (Convex Auth)**: `SITE_URL` on Convex is a **single** origin. Links in email use that host—so email sign-in is reliable for your **main** URL (e.g. `https://socialwaves.vercel.app/`). For a **one-off** preview test, you can temporarily set Convex `SITE_URL` to that preview’s `https://…vercel.app/` (then change it back); there isn’t a built-in “every preview gets its own `SITE_URL`.”
+
 ## Setup
 
 ```bash
