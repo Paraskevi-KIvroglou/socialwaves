@@ -16,9 +16,21 @@ A hackathon MVP that combines Open-Meteo marine forecasts with real surfer repor
 
 The Git repository root is **not** the Next.js app. The app lives in [`socialwaves/`](socialwaves/). If Vercel’s **Root Directory** is left as `.` (repo root), builds either fail or produce an empty site, and **https://socialwaves.vercel.app/** can return **404**.
 
-1. In Vercel: **Project → Settings → Build & Deployment → Root Directory** → set to **`socialwaves`** (Save).
-2. Redeploy (or push a commit to trigger a new build).
-3. Under **Environment Variables** (Production), point the Next.js app at your Convex deployment (same values as in `socialwaves/.env.local` after `npx convex dev`):
+### Fix: production URL returns 404 (NOT_FOUND)
+
+Do these in order:
+
+1. **Root Directory** — **Project → Settings → Build & Deployment → Root Directory** must be exactly **`socialwaves`** (not `.`, not empty). Save.
+2. **Redeploy** — **Deployments → … on latest commit → Redeploy** (or push any commit to `main`). Wait until status is **Ready**.
+3. **Build logs** — Open that deployment → **Building**. Confirm you see **Next.js** and `next build` completing with **Compiled** / **Route (app)**. If the build never runs Next or fails, fix errors first.
+4. **Domain** — **Project → Settings → Domains**. Ensure **`socialwaves.vercel.app`** is listed and points at this project (not an old empty project). Remove duplicate/conflicting projects using the same name if needed.
+5. **Optional check** — In a terminal: `curl -sI https://socialwaves.vercel.app/` should eventually show **HTTP/2 200** (not 404).
+
+Do **not** add a repo-root `vercel.json` that runs `cd socialwaves && …` **and** set Root Directory to `socialwaves` at the same time (that double-nests the path and breaks the build).
+
+### Convex URLs on Vercel (Production)
+
+Under **Environment Variables** (Production), point the Next.js app at your Convex deployment (same values as in `socialwaves/.env.local` after `npx convex dev`):
 
    **Option A — one backend for local + Vercel (Development deployment)**  
    Use this if you prefer a single Convex project/deployment and avoid mixing up prod vs dev URLs:
