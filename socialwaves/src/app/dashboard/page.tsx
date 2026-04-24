@@ -14,8 +14,11 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { AGENT_INSIGHTS } from "@/data/agentInsights";
 import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
 import { computeSurfScore } from "@/lib/surfScore";
+import { greetingName } from "@/lib/greetingName";
 import { getSession, DEFAULT_USER } from "@/lib/mockAuth";
 import { useFavorites } from "@/lib/useFavorites";
+import { useLocation } from "@/lib/LocationProvider";
+import { haversineKm, formatDistanceKm } from "@/lib/location";
 import type { SkillLevel, SurfForecast } from "@/lib/types";
 import type { FunctionReturnType } from "convex/server";
 
@@ -116,8 +119,11 @@ function BestTodayForecast({
 }
 
 export default function DashboardPage() {
-  const user = getSession() ?? DEFAULT_USER;
+  const localSession = getSession();
+  const user = localSession ?? DEFAULT_USER;
+  const me = useQuery(api.users.getMyProfile);
   const { favoriteSlugs } = useFavorites();
+  const { location } = useLocation();
   const beaches = useQuery(api.beaches.listAll);
   const recentReports = useQuery(api.reports.listRecent, { limit: 5 });
   const refreshMany = useAction(api.beaches.refreshManyByBeachSlugs);
@@ -152,10 +158,54 @@ export default function DashboardPage() {
     return (beaches as ConvexBeach[]).filter((b) => set.has(b.slug));
   }, [beaches, favoriteSlugs]);
 
+  const nearestRows = useMemo(() => {
+    if (!beaches) return [] as Array<{ row: ConvexBeach; km: number | null }>;
+    const list = (beaches as ConvexBeach[]).map((row) => ({
+      row,
+      km: location
+        ? haversineKm({ latitude: row.latitude, longitude: row.longitude }, location)
+        : null,
+    }));
+    if (location) list.sort((a, b) => (a.km ?? Infinity) - (b.km ?? Infinity));
+    return list.slice(0, 5);
+  }, [beaches, location]);
+
   return (
-    <AppShell greeting={`Hey ${user.displayName ?? "surfer"} 🌊`}>
+    <AppShell
+      greeting={`Hey ${greetingName(localSession, me)} 🌊`}
+    >
       <LocationGate />
       <BestTodayForecast slugs={topSlugs} skillLevel={skillLevel} preferredHeight={preferredHeight} />
+
+      <div>
+        <SectionHeader
+          title={location ? "Nearest to you" : "Nearby spots"}
+          emoji="📍"
+          action={
+            location && nearestRows[0]?.km != null ? (
+              <span className="text-slate-500 text-xs">
+                Closest {formatDistanceKm(nearestRows[0].km)}
+              </span>
+            ) : (
+              <Link href="/map">On the map →</Link>
+            )
+          }
+        />
+        {nearestRows.length === 0 ? (
+          <p className="text-sm text-slate-600 px-1">Loading beaches…</p>
+        ) : (
+          <div className="space-y-3">
+            {nearestRows.map(({ row }) => (
+              <BeachCardFromConvex
+                key={row.slug}
+                row={row}
+                skillLevel={skillLevel}
+                preferredHeight={preferredHeight}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <div>
         <SectionHeader

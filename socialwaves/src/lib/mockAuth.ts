@@ -5,8 +5,8 @@ const KEY = "socialwave.session.v1";
 
 export const DEFAULT_USER: User = {
   id: "u_demo",
-  handle: "salty_nassos",
-  displayName: "Nassos",
+  handle: "surfer",
+  displayName: "",
   email: "demo@socialwave.app",
   skillLevel: "intermediate",
   preferredWaveHeight: 1.2,
@@ -25,7 +25,17 @@ export function getSession(): User | null {
 }
 
 export function signInDemo(email: string): User {
-  const u: User = { ...DEFAULT_USER, email: email || DEFAULT_USER.email };
+  const e = (email || DEFAULT_USER.email).trim();
+  const fromEmail = e.split("@")[0]?.replace(/[._+]/g, " ").replace(/-/g, " ").trim();
+  const displayName = fromEmail
+    ? fromEmail
+        .split(/\s+/)
+        .map(
+          (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+        )
+        .join(" ")
+    : "";
+  const u: User = { ...DEFAULT_USER, email: e, displayName };
   window.localStorage.setItem(KEY, JSON.stringify(u));
   return u;
 }
