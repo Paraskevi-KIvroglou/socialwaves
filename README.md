@@ -1,75 +1,55 @@
-# 🌊 SurfSignal
+# SurfSignal / SocialWave
 
 **Forecasts predict. Surfers verify.**
 
-SurfSignal is a hackathon MVP that combines marine weather forecasts (Open-Meteo) with real surfer reports to answer:
+A hackathon MVP that combines Open-Meteo marine forecasts with real surfer reports.
 
-- Which beach is best today
-- Whether the forecast was actually correct
-- Personalized surf insights per user
+## Architecture
 
-## Core idea
-
-Most surf apps stop at prediction. SurfSignal goes further:
-
-- Compares forecast vs real surfer reports
-- Learns which beaches are reliable
-- Adapts to each surfer’s preferences
-
-## Agent system
-
-- **Forecast Agent** — reads weather data
-- **Beach Scout Agent** — finds best spots
-- **Reality Check Agent** — compares real reports
-- **Trust Score Agent** — scores accuracy
-- **Personal Coach Agent** — learns user preferences
-
-## Tech stack
-
-- Next.js
-- TypeScript
-- Tailwind CSS
-- Open-Meteo API
-- Local mock data (MVP)
-
-## MVP features
-
-- Surfer profile
-- Beach forecast
-- Surf score
-- Condition reporting
-- Forecast accuracy
-- Personal analytics
-
-## Demo flow
-
-1. View forecast
-2. Check surf score
-3. Submit a real-world report
-4. See forecast vs reality
-5. Get personal insights
+- **Next.js 16 / React 19 / Tailwind 4** — app at [socialwaves/](socialwaves/)
+- **Convex** — reactive backend (beaches, forecasts cache, reports, favorites) in [socialwaves/convex/](socialwaves/convex/)
+- **Open-Meteo** — Marine + Weather APIs, called from a Convex action with 30-min per-beach cache (see [docs/OPEN-METEO.md](docs/OPEN-METEO.md))
+- **localStorage mock auth** — `src/lib/mockAuth.ts` (Convex Auth magic-link deferred until an email provider is wired)
+- **Location** — client-side only via `src/lib/LocationProvider.tsx` per [.cursor/rules/location.mdc](.cursor/rules/location.mdc)
 
 ## Setup
 
 ```bash
+cd socialwaves
 npm install
-npm run dev
+npx convex dev --once         # creates .env.local with NEXT_PUBLIC_CONVEX_URL
+npm run seed:beaches          # loads 192 spots from data/ into Convex + seeds demo reports
+npm run dev                   # next dev
+# in another terminal, keep convex live:
+npm run convex                # convex dev (watches convex/ and pushes)
 ```
 
-## Vision
+Open http://localhost:3000 — you'll land on `/dashboard`.
 
-*“The Waze of surfing — powered by real surfers.”*
+## Data
 
-## Quick structure
+The canonical beach list is [data/surf_spots_offshore_coordinates.csv](data/surf_spots_offshore_coordinates.csv) (192 spots). The seed script slugs them as `spot-<id>-<kebab-name>` and writes them to the `beaches` table.
 
-```text
-surf-signal/
-├── README.md
-└── .cursor/
-    └── rules/
-        ├── product.mdc
-        ├── tech-stack.mdc
-        ├── openmeteo.mdc
-        ├── agents.mdc
-        └── ui.mdc
-```
+## Routes
+
+- `/login` — mock sign-in (localStorage)
+- `/dashboard` — best beach today, favorites, recent reports, agent insights
+- `/beaches` — full 192-spot directory, distance-sorted when location is granted
+- `/beach/[slug]` — forecast, forecast-vs-reality, report feed, report CTA
+- `/map` — leaflet map of every spot
+- `/reports` — global community feed
+- `/analytics` — your session stats
+- `/profile` — preferences + favorites + sign out
+
+## Convex modules
+
+- `convex/schema.ts` — `beaches`, `forecasts`, `reports`, `favorites`
+- `convex/beaches.ts` — `listAll`, `getBySlug`, `upsertMany`
+- `convex/forecasts.ts` — `getCached` (30-min TTL), `refresh` / `refreshMany` actions (Open-Meteo + mock fallback), `writeForecast` internal mutation
+- `convex/reports.ts` — `listForBeach`, `listForHandle`, `listRecent`, `create`, `seedIfEmpty`
+- `convex/favorites.ts` — `list`, `toggle`
+
+## Deferred
+
+- Convex Auth magic link (no email provider wired yet — skipped Resend for now)
+- Per-user server-side preferences (skill, preferred wave height) — stays in localStorage until auth lands

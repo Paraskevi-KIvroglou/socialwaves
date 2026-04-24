@@ -5,6 +5,14 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      // React 19 / Next 16 opinionated rules. We hydrate from localStorage in
+      // effects on purpose — this is the idiomatic pattern and not a bug.
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

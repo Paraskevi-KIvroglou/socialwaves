@@ -21,6 +21,15 @@ export default defineSchema({
     ),
   }).index("email", ["email"]),
 
+  /** Curated surf spots (seeded for /beach/[id] and picks). */
+  beaches: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    region: v.optional(v.string()),
+    latitude: v.number(),
+    longitude: v.number(),
+  }).index("by_slug", ["slug"]),
+
   /** One row per Open-Meteo response: full JSON as stored by the backend (no client shaping). */
   openMeteoRaw: defineTable({
     latitude: v.number(),

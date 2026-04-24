@@ -1,188 +1,222 @@
 "use client";
 
-import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api } from "convex/_generated/api";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useAction, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { AppShell } from "@/components/AppShell";
+import { BeachCard } from "@/components/BeachCard";
+import { ForecastCard } from "@/components/ForecastCard";
+import { AgentCard } from "@/components/AgentCard";
+import { ReportFeedCard } from "@/components/ReportFeedCard";
+import { LocationGate } from "@/components/LocationGate";
+import { SectionHeader } from "@/components/SectionHeader";
+import { AGENT_INSIGHTS } from "@/data/agentInsights";
+import { toUiBeach, type ConvexBeach } from "@/lib/beachUi";
+import { computeSurfScore } from "@/lib/surfScore";
+import { getSession, DEFAULT_USER } from "@/lib/mockAuth";
+import { useFavorites } from "@/lib/useFavorites";
+import type { SkillLevel, SurfForecast } from "@/lib/types";
+import type { FunctionReturnType } from "convex/server";
+
+type CachedForecast = NonNullable<FunctionReturnType<typeof api.forecasts.getCached>>;
+type RecentReportRow = NonNullable<FunctionReturnType<typeof api.reports.listRecent>>[number];
+
+function buildSurfForecast(
+  raw: CachedForecast,
+  skillLevel: SkillLevel,
+  preferredHeight: number
+): SurfForecast {
+  const surfScore = computeSurfScore({
+    waveHeight: raw.waveHeight,
+    swellPeriod: raw.swellPeriod,
+    windSpeed: raw.windSpeed,
+    skillLevel,
+    preferredHeight,
+  });
+  return {
+    waveHeight: raw.waveHeight,
+    swellPeriod: raw.swellPeriod,
+    swellDirection: raw.swellDirection,
+    windSpeed: raw.windSpeed,
+    surfScore,
+    bestWindow: raw.bestWindow,
+    updatedAt: raw.updatedAt,
+    source: raw.source,
+  };
+}
+
+function BeachCardFromConvex({
+  row,
+  skillLevel,
+  preferredHeight,
+}: {
+  row: ConvexBeach;
+  skillLevel: SkillLevel;
+  preferredHeight: number;
+}) {
+  const forecast = useQuery(api.forecasts.getCached, { beachSlug: row.slug });
+  const beach = toUiBeach(row);
+  const surfForecast =
+    forecast === undefined || forecast === null
+      ? undefined
+      : buildSurfForecast(forecast, skillLevel, preferredHeight);
+  return <BeachCard beach={beach} forecast={surfForecast} />;
+}
+
+function BestTodayForecast({
+  slugs,
+  skillLevel,
+  preferredHeight,
+}: {
+  slugs: string[];
+  skillLevel: SkillLevel;
+  preferredHeight: number;
+}) {
+  const padded = useMemo(() => {
+    const s = [...slugs.slice(0, 8)];
+    while (s.length < 8) s.push("");
+    return s;
+  }, [slugs]);
+
+  const q0 = useQuery(api.forecasts.getCached, padded[0] ? { beachSlug: padded[0] } : "skip");
+  const q1 = useQuery(api.forecasts.getCached, padded[1] ? { beachSlug: padded[1] } : "skip");
+  const q2 = useQuery(api.forecasts.getCached, padded[2] ? { beachSlug: padded[2] } : "skip");
+  const q3 = useQuery(api.forecasts.getCached, padded[3] ? { beachSlug: padded[3] } : "skip");
+  const q4 = useQuery(api.forecasts.getCached, padded[4] ? { beachSlug: padded[4] } : "skip");
+  const q5 = useQuery(api.forecasts.getCached, padded[5] ? { beachSlug: padded[5] } : "skip");
+  const q6 = useQuery(api.forecasts.getCached, padded[6] ? { beachSlug: padded[6] } : "skip");
+  const q7 = useQuery(api.forecasts.getCached, padded[7] ? { beachSlug: padded[7] } : "skip");
+
+  const queries = [q0, q1, q2, q3, q4, q5, q6, q7];
+  const best = useMemo(() => {
+    const entries = padded
+      .map((slug, i) => ({ slug, raw: queries[i] }))
+      .filter(
+        (x): x is { slug: string; raw: CachedForecast } =>
+          Boolean(x.slug) && x.raw !== undefined && x.raw !== null
+      );
+    let top: SurfForecast | null = null;
+    for (const { raw } of entries) {
+      const sf = buildSurfForecast(raw, skillLevel, preferredHeight);
+      if (!top || sf.surfScore > top.surfScore) top = sf;
+    }
+    return top;
+  }, [padded, q0, q1, q2, q3, q4, q5, q6, q7, skillLevel, preferredHeight]);
+
+  if (!best) {
+    return (
+      <section className="rounded-3xl border border-slate-200 bg-slate-50/90 p-8 text-center text-slate-600 shadow-[var(--shadow-soft)]">
+        Checking today&apos;s conditions…
+      </section>
+    );
+  }
+
+  return <ForecastCard forecast={best} />;
+}
 
 export default function DashboardPage() {
-  const token = useAuthToken();
-  const { signOut } = useAuthActions();
-  const profile = useQuery(api.users.getMyProfile, token ? {} : "skip");
-  const evaluation = useQuery(
-    api.evaluations.getMyEvaluationSnapshot,
-    token ? {} : "skip",
-  );
-  const updateLocation = useMutation(api.users.updateMyLocation);
-  const refreshMarine = useAction(api.openMeteoActions.refreshMarineForecast);
-  const [name, setName] = useState("");
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
+  const user = getSession() ?? DEFAULT_USER;
+  const { favoriteSlugs } = useFavorites();
+  const beaches = useQuery(api.beaches.listAll);
+  const recentReports = useQuery(api.reports.listRecent, { limit: 5 });
+  const refreshMany = useAction(api.forecasts.refreshMany);
+  const refreshedRef = useRef(false);
 
-  const loc = profile?.location;
-  const marine = useQuery(
-    api.openMeteo.getMarineForecastForLocation,
-    loc
-      ? { latitude: loc.latitude, longitude: loc.longitude }
-      : "skip",
+  const skillLevel = user.skillLevel;
+  const preferredHeight = user.preferredWaveHeight;
+
+  const topSlugs = useMemo(
+    () => (beaches ? beaches.slice(0, 8).map((b: ConvexBeach) => b.slug) : []),
+    [beaches]
   );
 
-  if (!token) {
-    return (
-      <div className="mx-auto flex min-h-[50vh] max-w-md flex-col justify-center gap-4 p-6">
-        <p className="text-blue-950">You are not signed in.</p>
-        <Link
-          href="/login"
-          className="inline-flex w-fit rounded-xl bg-blue-950 px-4 py-2.5 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/20 hover:bg-blue-900"
-        >
-          Sign in with email
-        </Link>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!beaches?.length || refreshedRef.current) return;
+    refreshedRef.current = true;
+    void refreshMany({
+      beachSlugs: beaches.slice(0, 8).map((b: ConvexBeach) => b.slug),
+    });
+  }, [beaches, refreshMany]);
 
-  if (profile === undefined || evaluation === undefined) {
-    return (
-      <p className="p-6 text-blue-900/80">Loading…</p>
-    );
-  }
+  const beachBySlug = useMemo(() => {
+    const m = new Map<string, ConvexBeach>();
+    if (!beaches) return m;
+    for (const b of beaches as ConvexBeach[]) m.set(b.slug, b);
+    return m;
+  }, [beaches]);
 
-  const nextWaveH =
-    marine && marine.hourly.waveHeight.length
-      ? marine.hourly.waveHeight[0]
-      : null;
+  const favoriteRows = useMemo(() => {
+    if (!beaches) return [];
+    const set = new Set(favoriteSlugs);
+    return (beaches as ConvexBeach[]).filter((b) => set.has(b.slug));
+  }, [beaches, favoriteSlugs]);
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-6 text-blue-950">
-      <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-      {profile && (
-        <p className="text-sm text-blue-900/70">
-          Signed in as {profile.email ?? "user"}
-        </p>
-      )}
-      {loc && (
-        <p className="text-sm">
-          <span className="font-medium">Saved location: </span>
-          {loc.name} ({loc.latitude.toFixed(4)}°, {loc.longitude.toFixed(4)}°)
-        </p>
-      )}
+    <AppShell greeting={`Hey ${user.displayName ?? "surfer"} 🌊`}>
+      <LocationGate />
+      <BestTodayForecast slugs={topSlugs} skillLevel={skillLevel} preferredHeight={preferredHeight} />
 
-      {loc && (
-        <div className="space-y-2 rounded-lg border border-sky-200/80 bg-sky-50/80 p-4 text-sm text-sky-950">
-          <p className="font-semibold">Open-Meteo (raw → parsed in Convex)</p>
-          {marine === undefined ? (
-            <p className="text-sky-800/80">Loading forecast…</p>
-          ) : marine ? (
-            <p>
-              <span className="font-medium">Next hour wave height: </span>
-              {nextWaveH != null ? `${nextWaveH.toFixed(2)} m` : "—"}
-            </p>
-          ) : (
-            <p className="text-sky-800/80">No ingested data yet. Refresh below.</p>
-          )}
-          <button
-            type="button"
-            className="rounded border border-sky-700 bg-sky-900 px-3 py-1.5 text-white"
-            onClick={() =>
-              void refreshMarine({
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                locationName: loc.name,
-              })
-            }
-          >
-            Fetch &amp; store raw + parse
-          </button>
-        </div>
-      )}
-
-      {evaluation && (
-        <section
-          className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 p-4"
-          aria-labelledby="evaluation-agent-heading"
-        >
-          <h2
-            id="evaluation-agent-heading"
-            className="text-sm font-semibold text-emerald-950"
-          >
-            Evaluation Agent
-          </h2>
-          <p className="mt-1 text-sm font-medium text-emerald-900">
-            {evaluation.headline}
-          </p>
-          <p className="mt-2 text-sm text-emerald-800/90">{evaluation.summary}</p>
-          {evaluation.trustPreview != null && (
-            <p className="mt-2 text-sm text-emerald-900">
-              <span className="font-medium">Trust preview: </span>
-              {evaluation.trustPreview}/100
-            </p>
-          )}
-          <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-emerald-800/85">
-            {evaluation.bullets.map((b: string) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <form
-        className="space-y-3"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const la = parseFloat(lat);
-          const lo = parseFloat(lng);
-          if (!name.trim() || Number.isNaN(la) || Number.isNaN(lo)) {
-            return;
-          }
-          await updateLocation({ name: name.trim(), latitude: la, longitude: lo });
-        }}
-      >
-        <p className="text-sm font-medium">Set home surf spot (stored on user)</p>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name (e.g. Pipeline, HI)"
-          className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
+      <div>
+        <SectionHeader
+          title="Your favorites"
+          emoji="⭐"
+          action={<Link href="/beaches">All beaches →</Link>}
         />
-        <div className="flex gap-2">
-          <input
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            placeholder="Latitude"
-            className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
-            inputMode="decimal"
-          />
-          <input
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
-            placeholder="Longitude"
-            className="w-full rounded-xl border border-sky-300/80 bg-sky-50/40 px-3 py-2 text-blue-950 outline-none ring-blue-900/15 focus:border-sky-500 focus:ring-2"
-            inputMode="decimal"
-          />
+        {favoriteRows.length === 0 ? (
+          <p className="text-sm text-slate-600 px-1">Star a beach to pin it here 🌟</p>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x pb-1">
+            {favoriteRows.map((row) => (
+              <div key={row.slug} className="min-w-[min(100%,320px)] snap-start shrink-0 w-[85vw] max-w-sm">
+                <BeachCardFromConvex
+                  row={row}
+                  skillLevel={skillLevel}
+                  preferredHeight={preferredHeight}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <SectionHeader
+          title="Surfer reports"
+          emoji="📝"
+          action={<Link href="/reports">See all →</Link>}
+        />
+        <div className="space-y-3">
+          {(recentReports ?? []).map((r: RecentReportRow) => {
+            const b = beachBySlug.get(r.beachSlug);
+            return (
+              <ReportFeedCard
+                key={r._id}
+                report={{
+                  beachSlug: r.beachSlug,
+                  kind: r.kind,
+                  note: r.note,
+                  createdAt: r.createdAt,
+                  userHandle: r.userHandle,
+                }}
+                beachName={b?.name}
+                beachArea={b?.area}
+              />
+            );
+          })}
         </div>
-        <button
-          type="submit"
-          className="rounded-xl bg-blue-950 px-3 py-2 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/20 hover:bg-blue-900"
-        >
-          Save location
-        </button>
-      </form>
-      <button
-        type="button"
-        className="text-sm text-blue-900/60 underline decoration-sky-400/70 underline-offset-4 hover:text-blue-950"
-        onClick={() => void signOut()}
-      >
-        Sign out
-      </button>
-      <p>
-        <Link
-          href="/"
-          className="text-sm font-medium text-blue-900/70 underline decoration-sky-400/70 underline-offset-4 hover:text-blue-950"
-        >
-          Home
-        </Link>
-      </p>
-    </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Agents on it" emoji="🤖" />
+        <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 snap-x">
+          {AGENT_INSIGHTS.map((i) => (
+            <div key={i.id} className="min-w-[85%] snap-start">
+              <AgentCard insight={i} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   );
 }

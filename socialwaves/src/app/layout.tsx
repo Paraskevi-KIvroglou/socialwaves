@@ -1,38 +1,57 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
-import { Providers } from "./providers";
+import type { Metadata, Viewport } from "next";
+import { Fredoka } from "next/font/google";
+import { LocationProvider } from "@/lib/LocationProvider";
+import { ConvexClientProvider } from "./ConvexClientProvider";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "SocialWaves",
-  description: "Surf and conditions",
+  title: "SocialWave — surf forecasts, verified by surfers 🦀",
+  description:
+    "Forecasts predict, surfers verify. SocialWave combines Open-Meteo marine forecasts with real surfer reports so you always know if it's worth going.",
+  applicationName: "SocialWave",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SocialWave",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-touch-icon.svg", type: "image/svg+xml" }],
+  },
+  openGraph: {
+    title: "SocialWave 🦀",
+    description: "Forecasts predict. Surfers verify.",
+    type: "website",
+  },
 };
 
-export default async function RootLayout({
+export const viewport: Viewport = {
+  themeColor: "#7DD3FC",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
+export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <ConvexAuthNextjsServerProvider>
-          <Providers>{children}</Providers>
-        </ConvexAuthNextjsServerProvider>
+    <html lang="en" className={`${fredoka.variable} h-full antialiased`}>
+      <body className="min-h-full bg-white text-slate-900 flex flex-col">
+        <ConvexClientProvider>
+          <LocationProvider>{children}</LocationProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );
