@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 
 const TABS = [
   { href: "/dashboard", label: "Home", emoji: "🏠" },
-  { href: "/beaches", label: "Beaches", emoji: "🏖️" },
+  { href: "/map", label: "Map", emoji: "🗺️" },
   { href: "/reports", label: "Reports", emoji: "📝" },
   { href: "/analytics", label: "You", emoji: "📈" },
   { href: "/profile", label: "Profile", emoji: "🦀" },

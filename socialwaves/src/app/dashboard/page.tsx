@@ -4,6 +4,7 @@ import { BeachCard } from "@/components/BeachCard";
 import { SurfScoreBadge } from "@/components/SurfScoreBadge";
 import { AgentCard } from "@/components/AgentCard";
 import { ReportFeedCard } from "@/components/ReportFeedCard";
+import { LocationGate } from "@/components/LocationGate";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Card } from "@/components/Card";
 import { BEACHES } from "@/data/beaches";
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell greeting={greeting}>
+      <LocationGate />
       {/* Hero: best beach today */}
       <Link
         href={`/beach/${best.beach.id}`}

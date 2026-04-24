@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fredoka } from "next/font/google";
+import { LocationProvider } from "@/lib/LocationProvider";
 import "./globals.css";
 
 const fredoka = Fredoka({
@@ -47,7 +48,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${fredoka.variable} h-full antialiased`}>
       <body className="min-h-full bg-white text-slate-900 flex flex-col">
-        {children}
+        <LocationProvider>{children}</LocationProvider>
       </body>
     </html>
   );

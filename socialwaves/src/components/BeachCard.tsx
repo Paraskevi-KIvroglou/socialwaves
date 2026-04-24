@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Beach, SurfForecast } from "@/lib/types";
 import { SurfScoreBadge } from "./SurfScoreBadge";
+import { DistanceBadge } from "./DistanceBadge";
 import { waveEmoji, windEmoji, compass } from "@/lib/weather";
 
 export function BeachCard({ beach, forecast }: { beach: Beach; forecast?: SurfForecast }) {
@@ -19,7 +20,10 @@ export function BeachCard({ beach, forecast }: { beach: Beach; forecast?: SurfFo
             <p className="text-xs text-slate-500">{beach.area} · {beach.country}</p>
           </div>
         </div>
-        {forecast ? <SurfScoreBadge score={forecast.surfScore} size="sm" /> : null}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <DistanceBadge latitude={beach.latitude} longitude={beach.longitude} />
+          {forecast ? <SurfScoreBadge score={forecast.surfScore} size="sm" /> : null}
+        </div>
       </div>
       {forecast ? (
         <div className="mt-3 flex items-center gap-4 text-sm text-slate-700">
