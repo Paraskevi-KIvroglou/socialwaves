@@ -7,3 +7,5 @@ node_modules
 data
 docs
 scripts
+.codex-*
+.codex-screenshots
