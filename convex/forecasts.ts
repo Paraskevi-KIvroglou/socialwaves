@@ -3,8 +3,6 @@ import { action, query, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 
-const TTL_MS = 30 * 60 * 1000;
-
 const MARINE = "https://marine-api.open-meteo.com/v1/marine";
 const HOURLY =
   "wave_height,wave_direction,wave_period,wind_wave_height,wind_wave_period,swell_wave_height,swell_wave_direction,swell_wave_period";
@@ -176,7 +174,7 @@ function pickHourIndex(time: string[], nowMs: number): number {
   return idx === -1 ? 0 : idx;
 }
 
-function bestWindowStr(h: Doc<"marineForecasts">["hourly"], nowMs: number): string {
+function bestWindowStr(h: Doc<"marineForecasts">["hourly"]): string {
   const { time, swellWaveHeight, waveHeight, windWaveHeight } = h;
   const n = Math.min(18, time.length);
   if (n === 0) return "7–10am";
@@ -219,7 +217,7 @@ function toCached(
     h.swellWaveDirection[i] ?? h.waveDirection[i] ?? 200,
   );
   const windSpeed = estWindKnots(h.windWaveHeight[i]);
-  const bestWindow = bestWindowStr(h, nowMs);
+  const bestWindow = bestWindowStr(h);
   const source: "open-meteo" | "mock" =
     raw?.source === "api" ? "open-meteo" : "mock";
   return {
