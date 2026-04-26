@@ -29,7 +29,7 @@ export default function LoginPage() {
             Sign in
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-blue-900/75">
-            Enter your email and we&apos;ll send you a magic link to sign in—no
+            Enter your email and we&apos;ll send you a magic link to sign in. No
             password needed.
           </p>
           <form
@@ -68,35 +68,16 @@ export default function LoginPage() {
               className="mt-4 rounded-xl border border-emerald-200/90 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-900"
               role="status"
             >
-              Check your inbox—we&apos;ve sent the link.
+              Check your inbox. We&apos;ve sent the link.
             </p>
           )}
-          <p className="mt-6 text-xs leading-relaxed text-blue-900/50">
-            Convex needs{" "}
-            <code className="rounded-md bg-sky-100/80 px-1.5 py-0.5 font-mono text-[0.8rem] text-blue-950">
-              AUTH_RESEND_KEY
-            </code>
-            ,{" "}
-            <code className="rounded-md bg-sky-100/80 px-1.5 py-0.5 font-mono text-[0.8rem] text-blue-950">
-              AUTH_RESEND_FROM
-            </code>
-            , and{" "}
-            <code className="rounded-md bg-sky-100/80 px-1.5 py-0.5 font-mono text-[0.8rem] text-blue-950">
-              SITE_URL
-            </code>{" "}
-            (dev vs prod) on each deployment—see{" "}
-            <code className="rounded-md bg-sky-100/80 px-1.5 py-0.5 font-mono text-[0.8rem] text-blue-950">
-              .env.local
-            </code>{" "}
-            comments.
-          </p>
         </div>
         <p className="mt-6 text-center">
           <Link
             href="/"
             className="text-sm font-medium text-blue-900/70 underline decoration-sky-400/80 underline-offset-4 transition hover:text-blue-950"
           >
-            ← Back to home
+            Back to home
           </Link>
         </p>
       </div>
