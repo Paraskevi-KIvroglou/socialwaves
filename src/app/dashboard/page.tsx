@@ -91,8 +91,8 @@ function BestTodayForecast({
   const q6 = useQuery(api.forecasts.getCached, padded[6] ? { beachSlug: padded[6] } : "skip");
   const q7 = useQuery(api.forecasts.getCached, padded[7] ? { beachSlug: padded[7] } : "skip");
 
-  const queries = [q0, q1, q2, q3, q4, q5, q6, q7];
   const best = useMemo(() => {
+    const queries = [q0, q1, q2, q3, q4, q5, q6, q7];
     const entries = padded
       .map((slug, i) => ({ slug, raw: queries[i] }))
       .filter(

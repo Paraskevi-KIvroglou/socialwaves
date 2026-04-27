@@ -36,6 +36,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Codex local verification artifacts
+.codex-*
+.codex-screenshots/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
