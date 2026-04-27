@@ -10,6 +10,8 @@ export default function LoginPage() {
   const token = useAuthToken();
   const router = useRouter();
   const [sent, setSent] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -36,11 +38,24 @@ export default function LoginPage() {
             className="mt-6 flex flex-col gap-4"
             onSubmit={async (e) => {
               e.preventDefault();
-              const form = new FormData(e.currentTarget);
-              form.set("redirectTo", "/dashboard");
-              const result = await signIn("resend", form);
-              if (!result.signingIn) {
-                setSent(true);
+              setError(null);
+              setSent(false);
+              setPending(true);
+
+              try {
+                const form = new FormData(e.currentTarget);
+                form.set("redirectTo", "/dashboard");
+                const result = await signIn("resend", form);
+                if (!result.signingIn) {
+                  setSent(true);
+                }
+              } catch (err) {
+                console.error("Magic link sign-in failed", err);
+                setError(
+                  "We couldn't send that link. Please check the email and try again.",
+                );
+              } finally {
+                setPending(false);
               }
             }}
           >
@@ -58,11 +73,21 @@ export default function LoginPage() {
             />
             <button
               type="submit"
-              className="rounded-xl bg-blue-950 px-4 py-3 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/25 transition hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800"
+              disabled={pending}
+              aria-busy={pending}
+              className="rounded-xl bg-blue-950 px-4 py-3 text-sm font-medium text-sky-100 shadow-md shadow-blue-950/25 transition hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 disabled:cursor-not-allowed disabled:bg-blue-950/70 disabled:text-sky-100/70"
             >
-              Email me a sign-in link
+              {pending ? "Sending..." : "Email me a sign-in link"}
             </button>
           </form>
+          {error && (
+            <p
+              className="mt-4 rounded-xl border border-rose-200/90 bg-rose-50/90 px-4 py-3 text-sm text-rose-900"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
           {sent && (
             <p
               className="mt-4 rounded-xl border border-emerald-200/90 bg-emerald-50/90 px-4 py-3 text-sm text-emerald-900"
