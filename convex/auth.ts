@@ -7,7 +7,9 @@ import { convexAuth } from "@convex-dev/auth/server";
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Resend({
-      from: process.env.AUTH_RESEND_FROM ?? "My App <onboarding@resend.dev>",
+      from:
+        process.env.AUTH_RESEND_FROM ??
+        "SocialWaves <onboarding@paraskevikivroglou.com>",
     }),
   ],
 });
