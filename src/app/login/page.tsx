@@ -2,22 +2,42 @@
 
 import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
-export default function LoginPage() {
+const DEFAULT_APP_ROUTE = "/dashboard";
+
+function safeAppPath(path: string | null) {
+  if (
+    !path ||
+    path === "/" ||
+    path.startsWith("/login") ||
+    !path.startsWith("/") ||
+    path.startsWith("//")
+  ) {
+    return DEFAULT_APP_ROUTE;
+  }
+  return path;
+}
+
+function LoginPageContent() {
   const { signIn } = useAuthActions();
   const token = useAuthToken();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = useMemo(
+    () => safeAppPath(searchParams.get("next")),
+    [searchParams],
+  );
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
-      router.replace("/dashboard");
+      router.replace(redirectTo);
     }
-  }, [token, router]);
+  }, [token, redirectTo, router]);
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-sky-100 via-blue-50 to-sky-200/90 px-4 py-12">
@@ -44,7 +64,7 @@ export default function LoginPage() {
 
               try {
                 const form = new FormData(e.currentTarget);
-                form.set("redirectTo", "/dashboard");
+                form.set("redirectTo", redirectTo);
                 const result = await signIn("resend", form);
                 if (!result.signingIn) {
                   setSent(true);
@@ -107,5 +127,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageContent />
+    </Suspense>
   );
 }
