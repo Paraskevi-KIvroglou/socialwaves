@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import { Fredoka } from "next/font/google";
 import { LocationProvider } from "@/lib/LocationProvider";
 import { ConvexClientProvider } from "./ConvexClientProvider";
@@ -52,9 +53,11 @@ export default function RootLayout({
         className="min-h-full bg-white text-slate-900 flex flex-col"
         suppressHydrationWarning
       >
-        <ConvexClientProvider>
-          <LocationProvider>{children}</LocationProvider>
-        </ConvexClientProvider>
+        <ConvexAuthNextjsServerProvider>
+          <ConvexClientProvider>
+            <LocationProvider>{children}</LocationProvider>
+          </ConvexClientProvider>
+        </ConvexAuthNextjsServerProvider>
       </body>
     </html>
   );
