@@ -19,9 +19,13 @@ const MAGIC_NEXT_BOUNCE_KEY = "__socialwave_magic_next";
 
 function formatMagicLinkFailure(err: unknown): string {
   const generic =
-    "We could not send that link. Try again in a moment. If this keeps happening, sign-in env vars on Convex may be misconfigured.";
+    "We could not send that link. Please try again in a minute.";
   const tips =
     "Check Convex → Settings → Environment: AUTH_RESEND_KEY (Resend API key), AUTH_RESEND_FROM (verified sender like “App <noreply@yourdomain.com>”), and SITE_URL (your live site, e.g. https://socialwaves.vercel.app).";
+
+  if (process.env.NODE_ENV === "production") {
+    return generic;
+  }
 
   let msg = "";
   if (err instanceof Error && err.message.trim()) {
