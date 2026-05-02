@@ -17,6 +17,35 @@ import { safeReturnPath } from "@/auth/routes";
 /** Convex Auth may stash `code=` inside `next`; replay once for server-side exchange */
 const MAGIC_NEXT_BOUNCE_KEY = "__socialwave_magic_next";
 
+function formatMagicLinkFailure(err: unknown): string {
+  const generic =
+    "We could not send that link. Try again in a moment. If this keeps happening, sign-in env vars on Convex may be misconfigured.";
+  const tips =
+    "Check Convex → Settings → Environment: AUTH_RESEND_KEY (Resend API key), AUTH_RESEND_FROM (verified sender like “App <noreply@yourdomain.com>”), and SITE_URL (your live site, e.g. https://socialwaves.vercel.app).";
+
+  let msg = "";
+  if (err instanceof Error && err.message.trim()) {
+    msg = err.message.trim();
+  }
+
+  if (!msg) {
+    return `${generic}\n\n${tips}`;
+  }
+
+  if (msg.length > 520) {
+    msg = `${msg.slice(0, 500)}…`;
+  }
+
+  if (/api.?key|unauthoriz|invalid.?key|^401\b/i.test(msg)) {
+    return `${msg}\n\n${tips}`;
+  }
+  if (/resend/i.test(msg)) {
+    return `${msg}\n\nTip: Sender domain must be verified in Resend and match AUTH_RESEND_FROM exactly.`;
+  }
+
+  return `${msg}\n\n${tips}`;
+}
+
 function LoginCardShell({
   children,
   busy,
@@ -155,9 +184,7 @@ function LoginInteractive({ redirectTo }: { redirectTo: string }) {
         }
       } catch (err) {
         console.error("Magic link sign-in failed", err);
-        setError(
-          "We could not send that link. Check the email or try again in a minute.",
-        );
+        setError(formatMagicLinkFailure(err));
       } finally {
         setPending(false);
       }
@@ -211,7 +238,7 @@ function LoginInteractive({ redirectTo }: { redirectTo: string }) {
       </form>
       {error && (
         <p
-          className="mt-4 rounded-xl border border-rose-200/90 bg-rose-50/90 px-4 py-3 text-sm text-rose-900"
+          className="mt-4 whitespace-pre-line rounded-xl border border-rose-200/90 bg-rose-50/90 px-4 py-3 text-sm text-rose-900"
           role="alert"
         >
           {error}
