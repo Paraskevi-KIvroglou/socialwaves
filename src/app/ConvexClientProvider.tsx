@@ -8,7 +8,7 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const client = useMemo(() => {
     if (!url) {
       throw new Error(
-        "NEXT_PUBLIC_CONVEX_URL is missing. Run `npx convex dev` in the socialwaves folder and add the printed URL to .env.local.",
+        "NEXT_PUBLIC_CONVEX_URL is missing. Run `npx convex dev` and add the printed URL to `.env.local` (and Vercel env).",
       );
     }
     return new ConvexReactClient(url, { unsavedChangesWarning: false });

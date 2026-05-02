@@ -53,7 +53,9 @@ export default function RootLayout({
         className="min-h-full bg-white text-slate-900 flex flex-col"
         suppressHydrationWarning
       >
-        <ConvexAuthNextjsServerProvider>
+        <ConvexAuthNextjsServerProvider
+          verbose={process.env.CONVEX_AUTH_VERBOSE === "1"}
+        >
           <ConvexClientProvider>
             <LocationProvider>{children}</LocationProvider>
           </ConvexClientProvider>
