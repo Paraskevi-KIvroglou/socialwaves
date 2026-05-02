@@ -3,9 +3,10 @@
 import { useAuthActions, useAuthToken } from "@convex-dev/auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 const DEFAULT_APP_ROUTE = "/dashboard";
+const MAGIC_BOUNCE_KEY = "socialwave:magicLinkNextBounce";
 
 function safeAppPath(path: string | null) {
   if (
@@ -29,6 +30,7 @@ function LoginPageContent() {
     () => safeAppPath(searchParams.get("next")),
     [searchParams],
   );
+  const didBounceMagicLink = useRef(false);
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,29 @@ function LoginPageContent() {
       router.replace(redirectTo);
     }
   }, [token, redirectTo, router]);
+
+  // If sign-in was skipped (e.g. Accept header) we may land on /login?next=/app?code=...
+  // One navigation to that URL lets the proxy exchange ?code= at the top level.
+  useEffect(() => {
+    const rawNext = searchParams.get("next");
+    if (
+      !rawNext ||
+      !rawNext.includes("code=") ||
+      !rawNext.startsWith("/") ||
+      rawNext.startsWith("//") ||
+      didBounceMagicLink.current
+    ) {
+      return;
+    }
+    try {
+      if (sessionStorage.getItem(MAGIC_BOUNCE_KEY) === rawNext) return;
+      sessionStorage.setItem(MAGIC_BOUNCE_KEY, rawNext);
+    } catch {
+      /* private mode */
+    }
+    didBounceMagicLink.current = true;
+    router.replace(rawNext);
+  }, [searchParams, router]);
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-sky-100 via-blue-50 to-sky-200/90 px-4 py-12">
